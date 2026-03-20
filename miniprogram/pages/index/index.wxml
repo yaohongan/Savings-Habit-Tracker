@@ -1,0 +1,401 @@
+<!--index.wxml-->
+<view class="page-container">
+  <!-- 顶部氛围背景 -->
+  <view class="header-bg">
+    <view class="bg-circle-1"></view>
+    <view class="bg-circle-2"></view>
+  </view>
+
+  <!-- 自定义透明导航栏 -->
+  <view class="nav-bar" style="padding-top: {{statusBarHeight}}px;">
+    <view class="nav-title">小简攒钱</view>
+    <view class="nav-buttons">
+      <view class="nav-btn" hover-class="hover-effect" bindtap="onTapAchievements">
+        <text class="nav-btn-icon">🏆</text>
+      </view>
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="main-scroll" style="padding-top: {{statusBarHeight + 44}}px;">
+    
+    <!-- 顶部资产大字区 -->
+    <view class="asset-hero">
+      <view class="asset-subtitle">
+        <text>我的小金库</text>
+        <view class="tag-badge" wx:if="{{totalSavedDisplay !== '0.00'}}">努力变富中 💸</view>
+        <view class="tag-badge" wx:else>开始你的第一笔 👇</view>
+      </view>
+      <view class="asset-amount">
+        <text class="symbol">¥</text>
+        <text class="number">{{totalSavedDisplay}}</text>
+      </view>
+      <view class="asset-progress" wx:if="{{totalGoalDisplay !== '0.00'}}">
+        <view class="progress-track">
+          <view class="progress-fill" style="width: {{overallPercent}}%;"></view>
+        </view>
+        <text class="progress-txt">总目标进度 {{overallPercentDisplay}}</text>
+      </view>
+    </view>
+
+    <!-- 悬浮数据统计卡片 -->
+    <view class="stats-floating-card" wx:if="{{goals.length > 0}}">
+      <view class="stat-col">
+        <text class="stat-num">{{monthlyAddedDisplay}}</text>
+        <text class="stat-label">本月新增(元)</text>
+      </view>
+      <view class="divider"></view>
+      <view class="stat-col">
+        <text class="stat-num">{{streakDisplay}}</text>
+        <text class="stat-label">连续打卡(天)</text>
+      </view>
+      <view class="divider"></view>
+      <view class="stat-col">
+        <text class="stat-num">{{totalCheckInsDisplay}}</text>
+        <text class="stat-label">累计打卡(次)</text>
+      </view>
+      <view class="divider"></view>
+      <view class="stat-col">
+        <text class="stat-num">{{doneGoalsCountDisplay}}</text>
+        <text class="stat-label">已完成(个)</text>
+      </view>
+    </view>
+
+    <!-- 热门目标一键添加 -->
+    <view class="hot-goals-section" wx:if="{{goals.length === 0}}">
+      <view class="section-title">热门目标一键添加</view>
+      <scroll-view scroll-x class="hot-goals-scroll" show-scrollbar="false">
+        <view 
+          wx:for="{{hotGoalTemplates}}" 
+          wx:key="name" 
+          class="hot-goal-card"
+          data-index="{{index}}"
+          bindtap="onAddHotGoal"
+        >
+          <text class="hot-goal-icon">{{item.icon}}</text>
+          <text class="hot-goal-name">{{item.name}}</text>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 攒钱目标区 -->
+    <view class="goals-section">
+      <view class="section-header">
+        <text class="title">我的攒钱目标</text>
+        <view class="btn-share" hover-class="hover-effect" bindtap="onGeneratePoster" wx:if="{{goals.length > 0}}">
+          <text class="icon">📸</text>
+          <text>生成海报</text>
+        </view>
+      </view>
+
+      <view class="goal-list" wx:if="{{goals.length > 0}}">
+        <view wx:for="{{goals}}" wx:key="id" class="goal-card {{item.completed ? 'completed' : ''}}" hover-class="hover-effect">
+          <view class="goal-left" style="background: {{item.color}};">
+            <text class="goal-emoji">{{item.icon}}</text>
+          </view>
+          <view class="goal-completed-badge" wx:if="{{item.completed}}">✓ 已完成</view>
+          <view class="goal-right">
+            <view class="goal-top">
+              <text class="goal-name">{{item.name}}</text>
+              <text class="goal-percent" style="color: {{item.progressColor}}">{{item.percent}}%</text>
+            </view>
+            <view class="goal-mid">
+              <view class="g-progress-bg">
+                <view class="g-progress-fill" style="width: {{item.percent}}%; background: {{item.progressColor}};"></view>
+              </view>
+            </view>
+            <view class="goal-bottom">
+              <view class="goal-info">
+                <text>已攒 ¥{{item.savedDisplay}}</text>
+                <text>目标 ¥{{item.targetDisplay}}</text>
+              </view>
+              <view class="goal-extra" wx:if="{{item.remainingDays !== null && item.remainingDays >= 0}}">
+                <text>剩余 {{item.remainingDays}} 天</text>
+              </view>
+            </view>
+          </view>
+          <view class="goal-actions">
+            <view class="action-btn action-btn-checkin" data-id="{{item.id}}" bindtap="onTapCheckInWithGoal">
+              <text>➕ 记录</text>
+            </view>
+            <view class="action-btn action-btn-history" data-id="{{item.id}}" bindtap="onOpenHistory">
+              <text>📜 记录</text>
+            </view>
+            <view class="action-btn action-btn-edit" data-id="{{item.id}}" bindtap="onOpenEditGoal">
+              <text>✏️ 编辑</text>
+            </view>
+            <view class="action-btn action-btn-delete" data-id="{{item.id}}" bindtap="onDeleteGoal">
+              <text>🗑️ 删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty-state" wx:else>
+        <view class="empty-illustration">
+          <text class="empty-icon">💰</text>
+        </view>
+        <text class="empty-title">开始你的攒钱计划</text>
+        <text class="empty-desc">创建第一个目标，一步步靠近想要的生活 ✨</text>
+        <view class="empty-create-btn" hover-class="hover-effect" bindtap="onTapCreateGoal">
+          <text class="empty-create-btn-text">+ 创建第一个目标</text>
+        </view>
+      </view>
+      
+      <view class="compliance-tip">
+        本工具仅为攒钱记录使用，不提供任何金融理财相关服务
+      </view>
+
+      <view class="bottom-spacer"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部创建目标按钮 -->
+  <view class="bottom-bar">
+    <view class="create-btn" hover-class="hover-effect" bindtap="onTapCreateGoal">
+      <text class="create-btn-icon">+</text>
+      <text class="create-btn-text">创建目标</text>
+    </view>
+  </view>
+
+  <!-- 打卡底部弹窗 (Bottom Sheet) -->
+  <view class="popup-mask {{showCheckInPopup ? 'popup-mask-show' : ''}}" bindtap="onClosePopup"></view>
+  
+  <view class="popup-content {{showCheckInPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">记录一笔攒钱</text>
+      <view class="popup-close" bindtap="onClosePopup">✕</view>
+    </view>
+
+    <!-- 目标选择区 -->
+    <scroll-view scroll-x class="goal-selector" show-scrollbar="false">
+      <view 
+        wx:for="{{goals}}" 
+        wx:key="id" 
+        class="goal-pill {{selectedGoalId === item.id ? 'goal-pill-active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onSelectGoal"
+      >
+        <text class="pill-emoji">{{item.icon}}</text>
+        <text class="pill-name">{{item.name}}</text>
+      </view>
+      <view class="goal-pill goal-pill-add" bindtap="onTapCreateGoal">
+        <text class="pill-name">+ 新目标</text>
+      </view>
+    </scroll-view>
+
+    <!-- 快捷金额按钮 -->
+    <view class="quick-amounts">
+      <view 
+        wx:for="{{quickAmounts}}" 
+        wx:key="*this" 
+        class="quick-amount-btn" 
+        hover-class="quick-amount-hover"
+        data-amount="{{item}}"
+        bindtap="onQuickAmount"
+      >
+        ¥{{item}}
+      </view>
+    </view>
+
+    <!-- 金额输入显示区 -->
+    <view class="amount-display">
+      <text class="currency-symbol">¥</text>
+      <text class="amount-value {{inputAmount === '0' ? 'amount-placeholder' : ''}}">{{inputAmount}}</text>
+    </view>
+
+    <!-- 高颜值数字键盘 -->
+    <view class="keyboard-area">
+      <view class="keyboard-grid">
+        <view 
+          wx:for="{{keyboardNum}}" 
+          wx:key="*this" 
+          class="key-btn" 
+          hover-class="key-btn-hover"
+          data-key="{{item}}"
+          bindtap="onTapKey"
+        >
+          {{item}}
+        </view>
+      </view>
+      <view class="keyboard-action">
+        <view class="action-btn-date">今天 ▼</view>
+        <view class="action-btn-share" hover-class="hover-effect" bindtap="onGeneratePoster">海报</view>
+        <view class="action-btn-confirm" hover-class="hover-effect" bindtap="onConfirmCheckIn">打卡</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 创建目标弹窗 -->
+  <view class="popup-mask {{showCreateGoalPopup ? 'popup-mask-show' : ''}}" bindtap="onCloseCreateGoal"></view>
+  
+  <view class="popup-content popup-content-create {{showCreateGoalPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">创建新目标</text>
+      <view class="popup-close" bindtap="onCloseCreateGoal">✕</view>
+    </view>
+
+    <view class="create-form">
+      <view class="form-item">
+        <text class="form-label">目标名称</text>
+        <input 
+          class="form-input" 
+          placeholder="比如：旅行基金" 
+          value="{{createGoalName}}"
+          bindinput="onInputGoalName"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">目标金额 (元)</text>
+        <input 
+          class="form-input" 
+          type="number" 
+          placeholder="请输入目标金额" 
+          value="{{createGoalTarget}}"
+          bindinput="onInputGoalTarget"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">截止日期</text>
+        <picker 
+          mode="date" 
+          value="{{createGoalDeadline}}" 
+          bindchange="onDateChange"
+          start="{{today}}"
+        >
+          <view class="form-picker">
+            {{createGoalDeadline}}
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="popup-actions">
+      <view class="action-btn action-btn-cancel" hover-class="hover-effect" bindtap="onCloseCreateGoal">取消</view>
+      <view class="action-btn action-btn-confirm-create" hover-class="hover-effect" bindtap="onConfirmCreateGoal">确认创建</view>
+    </view>
+  </view>
+
+  <!-- 成就弹窗 -->
+  <view class="popup-mask {{showAchievementsPopup ? 'popup-mask-show' : ''}}" bindtap="onCloseAchievements"></view>
+  
+  <view class="popup-content popup-content-achievements {{showAchievementsPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">我的成就 🏆</text>
+      <view class="popup-close" bindtap="onCloseAchievements">✕</view>
+    </view>
+
+    <view class="achievements-list">
+      <view 
+        wx:for="{{achievementList}}" 
+        wx:key="key" 
+        class="achievement-item {{achievements[item.key] ? 'achievement-unlocked' : 'achievement-locked'}}"
+      >
+        <view class="achievement-icon">{{item.icon}}</view>
+        <view class="achievement-info">
+          <text class="achievement-name">{{item.name}}</text>
+          <text class="achievement-desc">{{item.desc}}</text>
+        </view>
+        <view class="achievement-status">
+          <text wx:if="{{achievements[item.key]}}">✅ 已解锁</text>
+          <text wx:else>🔒 未解锁</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑目标弹窗 -->
+  <view class="popup-mask {{showEditGoalPopup ? 'popup-mask-show' : ''}}" bindtap="onCloseEditGoal"></view>
+  
+  <view class="popup-content popup-content-create {{showEditGoalPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">编辑目标</text>
+      <view class="popup-close" bindtap="onCloseEditGoal">✕</view>
+    </view>
+
+    <view class="create-form">
+      <view class="form-item">
+        <text class="form-label">目标名称</text>
+        <input 
+          class="form-input" 
+          placeholder="比如：旅行基金" 
+          value="{{editGoalName}}"
+          bindinput="onInputEditName"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">目标金额 (元)</text>
+        <input 
+          class="form-input" 
+          type="number" 
+          placeholder="请输入目标金额" 
+          value="{{editGoalTarget}}"
+          bindinput="onInputEditTarget"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">截止日期</text>
+        <picker 
+          mode="date" 
+          value="{{editGoalDeadline}}" 
+          bindchange="onEditDateChange"
+          start="{{today}}"
+        >
+          <view class="form-picker">
+            {{editGoalDeadline}}
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="popup-actions">
+      <view class="action-btn action-btn-cancel" hover-class="hover-effect" bindtap="onCloseEditGoal">取消</view>
+      <view class="action-btn action-btn-confirm-create" hover-class="hover-effect" bindtap="onConfirmEditGoal">保存修改</view>
+    </view>
+  </view>
+
+  <!-- 历史记录弹窗 -->
+  <view class="popup-mask {{showHistoryPopup ? 'popup-mask-show' : ''}}" bindtap="onCloseHistory"></view>
+  
+  <view class="popup-content popup-content-history {{showHistoryPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">打卡记录</text>
+      <view class="popup-close" bindtap="onCloseHistory">✕</view>
+    </view>
+
+    <view class="history-list">
+      <view wx:for="{{currentGoalHistory}}" wx:key="index" class="history-item">
+        <view class="history-info">
+          <text class="history-date">{{item.date}}</text>
+        </view>
+        <text class="history-amount">+ ¥{{item.amount}}</text>
+      </view>
+      <view class="empty-history" wx:if="{{currentGoalHistory.length === 0}}">
+        <text>暂无记录</text>
+      </view>
+    </view>
+  </view>
+
+  <canvas
+    canvas-id="posterCanvas"
+    class="poster-canvas"
+    style="width: {{posterWidth}}px; height: {{posterHeight}}px;"
+  ></canvas>
+
+  <!-- 庆祝动画弹窗 -->
+  <view class="celebration-overlay {{showCelebration ? 'celebration-show' : ''}}" bindtap="closeCelebration">
+    <view class="celebration-content">
+      <view class="celebration-icon">🎉</view>
+      <text class="celebration-title">目标达成!</text>
+      <text class="celebration-desc">恭喜你完成了「{{celebrationGoalName}}」</text>
+      <text class="celebration-sub">继续加油，下一个目标在等着你 ✨</text>
+      <view class="celebration-btn" hover-class="hover-effect" bindtap="closeCelebration">
+        <text>知道啦</text>
+      </view>
+    </view>
+  </view>
+
+</view>

@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/example/index"
+  ],
+  "window": {
+    "backgroundColor": "#FDFBF7",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FDFBF7",
+    "navigationBarTitleText": "小简攒钱打卡",
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom"
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}
