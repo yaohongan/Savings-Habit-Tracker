@@ -15,6 +15,7 @@ const KEYBOARD_NUM = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "�
 const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000];
 const POSTER_WIDTH = 750;
 const POSTER_HEIGHT = 1334;
+const POSTER_MINI_CODE_SRC = "../../images/share-mini-code.jpg";
 
 function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -714,174 +715,198 @@ Page({
     });
   },
 
-  onGeneratePoster() {
+  exportPosterCanvas(ctx, width, height) {
+    return new Promise((resolve, reject) => {
+      ctx.draw(false, () => {
+        setTimeout(() => {
+          wx.canvasToTempFilePath(
+            {
+              canvasId: "posterCanvas",
+              x: 0,
+              y: 0,
+              width,
+              height,
+              destWidth: width * 2,
+              destHeight: height * 2,
+              success: (res) => {
+                resolve(res.tempFilePath);
+              },
+              fail: reject,
+            },
+            this
+          );
+        }, 300);
+      });
+    });
+  },
+
+  async onGeneratePoster() {
     if (this.data.isGeneratingPoster) return;
     this.setData({ isGeneratingPoster: true });
     wx.showLoading({ title: "生成海报中..." });
 
-    const now = new Date();
-    const monthArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const dateText = `${String(now.getDate()).padStart(2, "0")} ${monthArr[now.getMonth()]} ${now.getFullYear()}`;
-    const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const dayText = weekDays[now.getDay()];
+    try {
+      const now = new Date();
+      const monthArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dateText = `${String(now.getDate()).padStart(2, "0")} ${monthArr[now.getMonth()]} ${now.getFullYear()}`;
+      const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const dayText = weekDays[now.getDay()];
 
-    const topGoal = (this.data.goals || [])[0] || {
-      name: "我的攒钱目标",
-      percent: "0.0",
-      targetDisplay: "0.00",
-      remainingDisplay: "0.00",
-    };
+      const topGoal = (this.data.goals || [])[0] || {
+        name: "我的攒钱目标",
+        percent: "0.0",
+        targetDisplay: "0.00",
+        remainingDisplay: "0.00",
+      };
 
-    const ctx = wx.createCanvasContext("posterCanvas", this);
-    const w = POSTER_WIDTH;
-    const h = POSTER_HEIGHT;
+      const ctx = wx.createCanvasContext("posterCanvas", this);
+      const w = POSTER_WIDTH;
+      const h = POSTER_HEIGHT;
 
-    // 1. 绘制极光水彩渐变背景 (中性冷暖交织)
-    const bgGradient = ctx.createLinearGradient(0, 0, w, h);
-    bgGradient.addColorStop(0, "#E8F8F5"); // 浅薄荷
-    bgGradient.addColorStop(0.4, "#EBF5FB"); // 浅蓝
-    bgGradient.addColorStop(1, "#FDFBF7"); // 奶油白
-    ctx.setFillStyle(bgGradient);
-    ctx.fillRect(0, 0, w, h);
+      // 1. 绘制极光水彩渐变背景 (中性冷暖交织)
+      const bgGradient = ctx.createLinearGradient(0, 0, w, h);
+      bgGradient.addColorStop(0, "#E8F8F5");
+      bgGradient.addColorStop(0.4, "#EBF5FB");
+      bgGradient.addColorStop(1, "#FDFBF7");
+      ctx.setFillStyle(bgGradient);
+      ctx.fillRect(0, 0, w, h);
 
-    // 绘制一些抽象的光晕色块 (模拟水彩扩散)
-    ctx.beginPath();
-    ctx.arc(100, 200, 300, 0, 2 * Math.PI);
-    ctx.setFillStyle("rgba(163, 228, 215, 0.4)");
-    ctx.fill();
+      ctx.beginPath();
+      ctx.arc(100, 200, 300, 0, 2 * Math.PI);
+      ctx.setFillStyle("rgba(163, 228, 215, 0.4)");
+      ctx.fill();
 
-    ctx.beginPath();
-    ctx.arc(650, 900, 400, 0, 2 * Math.PI);
-    ctx.setFillStyle("rgba(174, 214, 241, 0.4)");
-    ctx.fill();
+      ctx.beginPath();
+      ctx.arc(650, 900, 400, 0, 2 * Math.PI);
+      ctx.setFillStyle("rgba(174, 214, 241, 0.4)");
+      ctx.fill();
 
-    // 2. 顶部装饰文字
-    ctx.setFillStyle("#7F8C8D");
-    ctx.setFontSize(28);
-    ctx.setTextAlign("left");
-    ctx.fillText("X I A O J I A N", 60, 100);
-    ctx.setFontSize(24);
-    ctx.fillText("RECORD YOUR SHINING MOMENTS", 60, 140);
+      // 2. 顶部装饰文字
+      ctx.setFillStyle("#7F8C8D");
+      ctx.setFontSize(28);
+      ctx.setTextAlign("left");
+      ctx.fillText("X I A O J I A N", 60, 100);
+      ctx.setFontSize(24);
+      ctx.fillText("RECORD YOUR SHINING MOMENTS", 60, 140);
 
-    ctx.setTextAlign("right");
-    ctx.setFontSize(40);
-    ctx.setFillStyle("#2C3E50");
-    ctx.fillText(dateText, w - 60, 100);
-    ctx.setFontSize(24);
-    ctx.setFillStyle("#7F8C8D");
-    ctx.fillText(dayText, w - 60, 140);
+      ctx.setTextAlign("right");
+      ctx.setFontSize(40);
+      ctx.setFillStyle("#2C3E50");
+      ctx.fillText(dateText, w - 60, 100);
+      ctx.setFontSize(24);
+      ctx.setFillStyle("#7F8C8D");
+      ctx.fillText(dayText, w - 60, 140);
 
-    // 3. 绘制玻璃拟态卡片 (主体)
-    ctx.save();
-    ctx.setShadow(0, 20, 60, "rgba(72, 201, 176, 0.1)");
-    drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
-    ctx.setFillStyle("rgba(255, 255, 255, 0.9)"); // 无法使用 CSS blur，用高不透明度白底代替
-    ctx.fill();
-    ctx.restore();
+      // 3. 绘制玻璃拟态卡片 (主体)
+      ctx.save();
+      ctx.setShadow(0, 20, 60, "rgba(72, 201, 176, 0.1)");
+      drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
+      ctx.setFillStyle("rgba(255, 255, 255, 0.9)");
+      ctx.fill();
+      ctx.restore();
 
-    // 卡片高光边框
-    drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
-    ctx.setLineWidth(2);
-    ctx.setStrokeStyle("rgba(255, 255, 255, 1)");
-    ctx.stroke();
+      drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
+      ctx.setLineWidth(2);
+      ctx.setStrokeStyle("rgba(255, 255, 255, 1)");
+      ctx.stroke();
 
-    // 4. 卡片内部排版
-    // 金句 (引号装饰)
-    ctx.setFillStyle("rgba(72, 201, 176, 0.15)");
-    ctx.setFontSize(180);
-    ctx.setTextAlign("left");
-    ctx.fillText("“", 80, 380);
+      // 4. 卡片内部排版
+      ctx.setFillStyle("rgba(72, 201, 176, 0.15)");
+      ctx.setFontSize(180);
+      ctx.setTextAlign("left");
+      ctx.fillText("“", 80, 380);
 
-    ctx.setFillStyle("#2C3E50");
-    ctx.setFontSize(38);
-    ctx.fillText("时间看得见你", 160, 360);
-    ctx.fillText("的每一分努力。", 160, 420);
+      ctx.setFillStyle("#2C3E50");
+      ctx.setFontSize(38);
+      ctx.fillText("时间看得见你", 160, 360);
+      ctx.fillText("的每一分努力。", 160, 420);
 
-    // 核心数据 - 连续打卡
-    ctx.setFillStyle("#7F8C8D");
-    ctx.setFontSize(26);
-    ctx.fillText("已连续打卡 (天)", 100, 540);
-    
-    ctx.setFillStyle("#48C9B0");
-    ctx.setFontSize(96);
-    ctx.fillText(this.data.streakDisplay, 100, 640);
+      ctx.setFillStyle("#7F8C8D");
+      ctx.setFontSize(26);
+      ctx.fillText("已连续打卡 (天)", 100, 540);
 
-    // 分割线
-    ctx.beginPath();
-    ctx.moveTo(100, 700);
-    ctx.lineTo(w - 100, 700);
-    ctx.setStrokeStyle("rgba(0, 0, 0, 0.05)");
-    ctx.setLineWidth(2);
-    ctx.stroke();
+      ctx.setFillStyle("#48C9B0");
+      ctx.setFontSize(96);
+      ctx.fillText(this.data.streakDisplay, 100, 640);
 
-    // 核心数据 - 攒钱总额
-    ctx.setFillStyle("#7F8C8D");
-    ctx.setFontSize(26);
-    ctx.fillText("金库总额 (元)", 100, 770);
-    
-    ctx.setFillStyle("#2C3E50");
-    ctx.setFontSize(80);
-    ctx.fillText(`¥ ${this.data.totalSavedDisplay}`, 100, 860);
+      ctx.beginPath();
+      ctx.moveTo(100, 700);
+      ctx.lineTo(w - 100, 700);
+      ctx.setStrokeStyle("rgba(0, 0, 0, 0.05)");
+      ctx.setLineWidth(2);
+      ctx.stroke();
 
-    // 目标进度提示
-    ctx.setFillStyle("#48C9B0");
-    ctx.setFontSize(28);
-    ctx.fillText(`距【${topGoal.name}】还差 ¥${topGoal.remainingDisplay}`, 100, 940);
+      ctx.setFillStyle("#7F8C8D");
+      ctx.setFontSize(26);
+      ctx.fillText("金库总额 (元)", 100, 770);
 
-    // 5. 底部品牌与小程序码
-    ctx.setFillStyle("#2C3E50");
-    ctx.setFontSize(32);
-    ctx.fillText("今天也在认真变富 ✨", 60, 1140);
-    ctx.setFillStyle("#7F8C8D");
-    ctx.setFontSize(24);
-    ctx.fillText("长按扫码，开启你的攒钱之旅", 60, 1190);
+      ctx.setFillStyle("#2C3E50");
+      ctx.setFontSize(80);
+      ctx.fillText(`¥ ${this.data.totalSavedDisplay}`, 100, 860);
 
-    // 绘制一个模拟的小程序码占位圆
-    ctx.save();
-    ctx.setShadow(0, 10, 30, "rgba(0,0,0,0.05)");
-    ctx.beginPath();
-    ctx.arc(w - 130, 1150, 70, 0, 2 * Math.PI);
-    ctx.setFillStyle("#FFFFFF");
-    ctx.fill();
-    ctx.restore();
+      ctx.setFillStyle("#48C9B0");
+      ctx.setFontSize(28);
+      ctx.fillText(`距【${topGoal.name}】还差 ¥${topGoal.remainingDisplay}`, 100, 940);
 
-    ctx.setFillStyle("#FF7E79");
-    ctx.setFontSize(20);
-    ctx.setTextAlign("center");
-    ctx.fillText("小程序码", w - 130, 1155);
+      // 5. 底部品牌与小程序码
+      ctx.setFillStyle("#2C3E50");
+      ctx.setFontSize(32);
+      ctx.fillText("今天也在认真变富 ✨", 60, 1140);
+      ctx.setFillStyle("#7F8C8D");
+      ctx.setFontSize(24);
+      ctx.fillText("长按扫码，开启你的攒钱之旅", 60, 1190);
 
-    // 执行绘制
-    ctx.draw(false, () => {
-      setTimeout(() => {
-        wx.canvasToTempFilePath(
-          {
-            canvasId: "posterCanvas",
-            x: 0,
-            y: 0,
-            width: w,
-            height: h,
-            destWidth: w * 2, // 提高清晰度
-            destHeight: h * 2,
-            success: (res) => {
-              wx.hideLoading();
-              this.setData({ isGeneratingPoster: false });
-              wx.previewImage({
-                urls: [res.tempFilePath],
-                current: res.tempFilePath,
-              });
-            },
-            fail: () => {
-              wx.hideLoading();
-              this.setData({ isGeneratingPoster: false });
-              wx.showToast({
-                title: "生成失败",
-                icon: "none",
-              });
-            },
-          },
-          this
-        );
-      }, 300); // 留一点时间给 draw 渲染
-    });
+      const codeBoxX = w - 220;
+      const codeBoxY = 1068;
+      const codeBoxSize = 160;
+      const codeImagePadding = 12;
+
+      ctx.save();
+      ctx.setShadow(0, 12, 30, "rgba(0, 0, 0, 0.06)");
+      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 36);
+      ctx.setFillStyle("#FFFFFF");
+      ctx.fill();
+      ctx.restore();
+
+      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 36);
+      ctx.setLineWidth(2);
+      ctx.setStrokeStyle("rgba(72, 201, 176, 0.15)");
+      ctx.stroke();
+
+      ctx.save();
+      drawRoundRectPath(
+        ctx,
+        codeBoxX + codeImagePadding,
+        codeBoxY + codeImagePadding,
+        codeBoxSize - codeImagePadding * 2,
+        codeBoxSize - codeImagePadding * 2,
+        28
+      );
+      ctx.clip();
+      ctx.drawImage(
+        POSTER_MINI_CODE_SRC,
+        codeBoxX + codeImagePadding,
+        codeBoxY + codeImagePadding,
+        codeBoxSize - codeImagePadding * 2,
+        codeBoxSize - codeImagePadding * 2
+      );
+      ctx.restore();
+
+      const posterTempFilePath = await this.exportPosterCanvas(ctx, w, h);
+
+      wx.hideLoading();
+      this.setData({ isGeneratingPoster: false });
+      wx.previewImage({
+        urls: [posterTempFilePath],
+        current: posterTempFilePath,
+      });
+    } catch (err) {
+      wx.hideLoading();
+      this.setData({ isGeneratingPoster: false });
+      wx.showToast({
+        title: "生成失败",
+        icon: "none",
+      });
+    }
   },
 });
