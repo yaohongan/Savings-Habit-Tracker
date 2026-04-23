@@ -40,8 +40,8 @@
     <!-- 悬浮数据统计卡片 -->
     <view class="stats-floating-card" wx:if="{{goals.length > 0}}">
       <view class="stat-col">
-        <text class="stat-num">{{monthlyAddedDisplay}}</text>
-        <text class="stat-label">本月新增(元)</text>
+        <text class="stat-num">{{todaySavedDisplay}}</text>
+        <text class="stat-label">今日已攒(元)</text>
       </view>
       <view class="divider"></view>
       <view class="stat-col">
@@ -58,6 +58,66 @@
         <text class="stat-num">{{doneGoalsCountDisplay}}</text>
         <text class="stat-label">已完成(个)</text>
       </view>
+    </view>
+
+    <view class="daily-focus-card" wx:if="{{goals.length > 0 && focusGoalId}}">
+      <view class="daily-focus-glow"></view>
+      <view class="daily-focus-top">
+        <view>
+          <view class="daily-focus-tag">今天先完成这一笔</view>
+          <view class="daily-focus-title">{{focusGoalName}}</view>
+        </view>
+        <view class="daily-focus-percent">{{focusGoalPercentDisplay}}</view>
+      </view>
+      <view class="daily-focus-progress">
+        <view class="daily-focus-progress-fill" style="width: {{focusGoalPercentDisplay}};"></view>
+      </view>
+      <view class="daily-focus-grid">
+        <view class="daily-focus-metric">
+          <text class="daily-focus-num">¥{{focusGoalSuggestedAmountDisplay}}</text>
+          <text class="daily-focus-label">建议今天存</text>
+        </view>
+        <view class="daily-focus-metric">
+          <text class="daily-focus-num">¥{{focusGoalRemainingDisplay}}</text>
+          <text class="daily-focus-label">距离目标还差</text>
+        </view>
+      </view>
+      <view class="daily-focus-meta">
+        <text>已攒 ¥{{focusGoalSavedDisplay}} / 目标 ¥{{focusGoalTargetDisplay}}</text>
+        <text>{{focusGoalRemainingDaysText}}</text>
+      </view>
+      <view class="daily-focus-tip">{{focusGoalHint}}</view>
+      <view class="daily-focus-milestone">{{focusGoalMilestoneText}}</view>
+      <view class="daily-focus-action" hover-class="hover-effect" bindtap="onTapCheckInWithGoal" data-id="{{focusGoalId}}">
+        <text>去完成今天这笔</text>
+      </view>
+    </view>
+
+    <view class="rhythm-card" wx:if="{{goals.length > 0}}">
+      <view class="rhythm-header">
+        <view>
+          <view class="rhythm-tag">最近 28 天</view>
+          <view class="rhythm-title">攒钱节奏板</view>
+        </view>
+        <view class="rhythm-summary">
+          <text class="rhythm-summary-num">{{rhythmWeekCheckInsDisplay}}/7</text>
+          <text class="rhythm-summary-label">本周打卡</text>
+        </view>
+      </view>
+      <view class="rhythm-grid">
+        <view
+          wx:for="{{rhythmDays}}"
+          wx:key="key"
+          class="rhythm-cell {{item.levelClass}} {{item.isToday ? 'rhythm-cell-today' : ''}}"
+        >
+          <text class="rhythm-cell-label">{{item.label}}</text>
+        </view>
+      </view>
+      <view class="rhythm-legend">
+        <text>活跃 {{rhythmActiveDaysDisplay}} 天</text>
+        <text>最近 28 天已攒 ¥{{rhythmRecentAddedDisplay}}</text>
+      </view>
+      <view class="rhythm-status">{{rhythmStatusText}}</view>
     </view>
 
     <!-- 热门目标一键添加 -->
@@ -89,36 +149,45 @@
 
       <view class="goal-list" wx:if="{{goals.length > 0}}">
         <view wx:for="{{goals}}" wx:key="id" class="goal-card {{item.completed ? 'completed' : ''}}" hover-class="hover-effect">
-          <view class="goal-left" style="background: {{item.color}};">
-            <text class="goal-emoji">{{item.icon}}</text>
-          </view>
           <view class="goal-completed-badge" wx:if="{{item.completed}}">✓ 已完成</view>
-          <view class="goal-right">
-            <view class="goal-top">
-              <text class="goal-name">{{item.name}}</text>
-              <text class="goal-percent" style="color: {{item.progressColor}}">{{item.percent}}%</text>
+          <view class="goal-shell">
+            <view class="goal-left" style="background: {{item.color}};">
+              <text class="goal-emoji">{{item.icon}}</text>
             </view>
-            <view class="goal-mid">
-              <view class="g-progress-bg">
-                <view class="g-progress-fill" style="width: {{item.percent}}%; background: {{item.progressColor}};"></view>
+            <view class="goal-right">
+              <view class="goal-top">
+                <view class="goal-heading">
+                  <text class="goal-name">{{item.name}}</text>
+                  <view class="goal-mode-badge">{{item.modeName}}</view>
+                </view>
+                <text class="goal-percent" style="color: {{item.progressColor}}">{{item.percent}}%</text>
+              </view>
+              <view class="goal-mid">
+                <view class="g-progress-bg">
+                  <view class="g-progress-fill" style="width: {{item.percent}}%; background: {{item.progressColor}};"></view>
+                </view>
+              </view>
+              <view class="goal-bottom">
+                <view class="goal-info">
+                  <text>已攒 ¥{{item.savedDisplay}}</text>
+                  <text>目标 ¥{{item.targetDisplay}}</text>
+                </view>
+                <view class="goal-extra" wx:if="{{item.remainingDays !== null && item.remainingDays >= 0}}">
+                  <text>剩余 {{item.remainingDays}} 天</text>
+                </view>
               </view>
             </view>
-            <view class="goal-bottom">
-              <view class="goal-info">
-                <text>已攒 ¥{{item.savedDisplay}}</text>
-                <text>目标 ¥{{item.targetDisplay}}</text>
-              </view>
-              <view class="goal-extra" wx:if="{{item.remainingDays !== null && item.remainingDays >= 0}}">
-                <text>剩余 {{item.remainingDays}} 天</text>
-              </view>
-            </view>
+          </view>
+          <view class="goal-insight-row">
+            <view class="goal-insight goal-insight-strong">{{item.actionText}}</view>
+            <view class="goal-insight">{{item.milestoneText}}</view>
           </view>
           <view class="goal-actions">
             <view class="action-btn action-btn-checkin" data-id="{{item.id}}" bindtap="onTapCheckInWithGoal">
               <text>➕ 记录</text>
             </view>
             <view class="action-btn action-btn-history" data-id="{{item.id}}" bindtap="onOpenHistory">
-              <text>📜 记录</text>
+              <text>📜 明细</text>
             </view>
             <view class="action-btn action-btn-edit" data-id="{{item.id}}" bindtap="onOpenEditGoal">
               <text>✏️ 编辑</text>
@@ -151,9 +220,9 @@
 
   <!-- 底部创建目标按钮 -->
   <view class="bottom-bar">
-    <view class="create-btn" hover-class="hover-effect" bindtap="onTapCreateGoal">
-      <text class="create-btn-icon">+</text>
-      <text class="create-btn-text">创建目标</text>
+    <view class="create-btn" hover-class="hover-effect" bindtap="onBottomPrimaryAction">
+      <text class="create-btn-icon">{{goals.length > 0 ? '¥' : '+'}}</text>
+      <text class="create-btn-text">{{goals.length > 0 ? '记录今天一笔' : '创建目标'}}</text>
     </view>
   </view>
 
@@ -182,6 +251,16 @@
         <text class="pill-name">+ 新目标</text>
       </view>
     </scroll-view>
+
+    <view class="checkin-plan-tip" wx:if="{{selectedGoalId}}">
+      <view class="checkin-plan-copy">
+        <text class="checkin-plan-title">{{selectedGoalHint}}</text>
+        <text class="checkin-plan-sub">今天已存 ¥{{selectedGoalTodayAddedDisplay}}，想跟着计划走可以直接用建议金额。</text>
+      </view>
+      <view class="checkin-plan-btn" hover-class="hover-effect" bindtap="onUseSuggestedAmount">
+        <text>填入 ¥{{selectedGoalSuggestedAmountDisplay}}</text>
+      </view>
+    </view>
 
     <!-- 快捷金额按钮 -->
     <view class="quick-amounts">
@@ -236,6 +315,22 @@
 
     <view class="create-form">
       <view class="form-item">
+        <text class="form-label">攒钱方式</text>
+        <view class="goal-mode-list">
+          <view
+            wx:for="{{goalModes}}"
+            wx:key="key"
+            class="goal-mode-card {{createGoalMode === item.key ? 'goal-mode-card-active' : ''}}"
+            data-mode="{{item.key}}"
+            bindtap="onSelectCreateGoalMode"
+          >
+            <text class="goal-mode-name">{{item.name}}</text>
+            <text class="goal-mode-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="form-item">
         <text class="form-label">目标名称</text>
         <input 
           class="form-input" 
@@ -269,6 +364,10 @@
           </view>
         </picker>
       </view>
+    </view>
+
+    <view class="create-helper-text">
+      建议先定一个能坚持 30 天以上的小目标，开始比完美更重要。
     </view>
 
     <view class="popup-actions">

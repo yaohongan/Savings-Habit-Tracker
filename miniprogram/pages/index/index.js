@@ -11,6 +11,13 @@ const HOT_GOAL_TEMPLATES = [
   { name: "退休养老", icon: "🌴", color: "#EFEBE9", accentColor: "#8D6E63" },
 ];
 
+const GOAL_MODES = [
+  { key: "free", name: "自由攒", desc: "先开始，想到就存一笔" },
+  { key: "daily", name: "365天", desc: "适合每天打卡一点点" },
+  { key: "weekly", name: "52周", desc: "适合每周固定存一次" },
+  { key: "monthly", name: "每月定存", desc: "适合发薪日固定存钱" },
+];
+
 const KEYBOARD_NUM = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"];
 const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000];
 const POSTER_WIDTH = 750;
@@ -68,6 +75,118 @@ function calcRemainingDays(deadline) {
   return diffDays;
 }
 
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function getModeDefaults(modeKey) {
+  const today = new Date();
+  switch (modeKey) {
+    case "daily":
+      return {
+        target: "3650",
+        deadline: addDays(today, 365),
+      };
+    case "weekly":
+      return {
+        target: "5200",
+        deadline: addDays(today, 364),
+      };
+    case "monthly":
+      return {
+        target: "12000",
+        deadline: addDays(today, 365),
+      };
+    default:
+      return {
+        target: "",
+        deadline: addDays(today, 365),
+      };
+  }
+}
+
+function normalizeSuggestedAmount(amount) {
+  if (!amount || amount <= 0) return 0;
+  if (amount < 20) return Math.ceil(amount);
+  if (amount < 100) return Math.ceil(amount / 5) * 5;
+  if (amount < 500) return Math.ceil(amount / 10) * 10;
+  if (amount < 1000) return Math.ceil(amount / 50) * 50;
+  return Math.ceil(amount / 100) * 100;
+}
+
+function calcSuggestedAmount(goal) {
+  const target = Number(goal.target || 0);
+  const saved = Number(goal.saved || 0);
+  const remaining = Math.max(target - saved, 0);
+  if (!remaining) return 0;
+
+  const remainingDays = calcRemainingDays(goal.deadline);
+  if (remainingDays && remainingDays > 0) {
+    return normalizeSuggestedAmount(remaining / remainingDays);
+  }
+
+  if (goal.mode === "weekly") {
+    return normalizeSuggestedAmount(remaining / 4);
+  }
+  if (goal.mode === "monthly") {
+    return normalizeSuggestedAmount(remaining / 3);
+  }
+
+  return normalizeSuggestedAmount(Math.max(remaining / 30, 10));
+}
+
+function getNextMilestonePercent(percent) {
+  const milestones = [25, 50, 75, 100];
+  return milestones.find((value) => percent < value) || null;
+}
+
+function buildRhythmDays(history = []) {
+  const grouped = history.reduce((acc, item) => {
+    const key = item.date;
+    if (!key) return acc;
+    acc[key] = (acc[key] || 0) + Number(item.amount || 0);
+    return acc;
+  }, {});
+
+  const days = [];
+  for (let offset = 27; offset >= 0; offset -= 1) {
+    const date = addDays(new Date(), -offset);
+    const key = toDateKey(date);
+    const amount = grouped[key] || 0;
+    let level = 0;
+    if (amount >= 200) {
+      level = 3;
+    } else if (amount >= 50) {
+      level = 2;
+    } else if (amount > 0) {
+      level = 1;
+    }
+
+    days.push({
+      key,
+      label: String(date.getDate()).padStart(2, "0"),
+      amountDisplay: formatAmount(amount),
+      amount,
+      level,
+      levelClass: `rhythm-level-${level}`,
+      isToday: offset === 0,
+    });
+  }
+
+  const activeDays = days.filter((item) => item.amount > 0).length;
+  const recentTotal = days.reduce((sum, item) => sum + item.amount, 0);
+  const weekCheckIns = days.slice(-7).filter((item) => item.amount > 0).length;
+
+  return {
+    days,
+    activeDays,
+    recentTotal,
+    weekCheckIns,
+  };
+}
+
 function getProgressColor(percent) {
   if (percent >= 100) return "#FFD700";
   if (percent >= 80) return "#4CAF50";
@@ -101,9 +220,14 @@ Page({
     inputAmount: "0",
     selectedGoalId: 1,
     editingGoalId: null,
+    today: "",
     createGoalName: "",
     createGoalTarget: "",
     createGoalDeadline: "",
+    createGoalMode: "free",
+    createGoalIcon: "",
+    createGoalColor: "",
+    createGoalAccentColor: "",
     editGoalName: "",
     editGoalTarget: "",
     editGoalDeadline: "",
@@ -113,6 +237,7 @@ Page({
     keyboardNum: KEYBOARD_NUM,
     quickAmounts: QUICK_AMOUNTS,
     hotGoalTemplates: HOT_GOAL_TEMPLATES,
+    goalModes: GOAL_MODES,
     goals: [],
     totalSavedDisplay: "0.00",
     totalGoalDisplay: "0.00",
@@ -123,6 +248,26 @@ Page({
     totalCheckInsDisplay: "0",
     doneGoalsCountDisplay: "0",
     dailyAvgDisplay: "0",
+    todaySavedDisplay: "0.00",
+    rhythmDays: [],
+    rhythmActiveDaysDisplay: "0",
+    rhythmRecentAddedDisplay: "0.00",
+    rhythmWeekCheckInsDisplay: "0",
+    rhythmStatusText: "",
+    focusGoalName: "",
+    focusGoalId: 0,
+    focusGoalPercentDisplay: "0.0%",
+    focusGoalSavedDisplay: "0.00",
+    focusGoalTargetDisplay: "0.00",
+    focusGoalRemainingDisplay: "0.00",
+    focusGoalRemainingDaysText: "",
+    focusGoalSuggestedAmountDisplay: "0.00",
+    focusGoalTodayAddedDisplay: "0.00",
+    focusGoalHint: "",
+    focusGoalMilestoneText: "",
+    selectedGoalSuggestedAmountDisplay: "0.00",
+    selectedGoalTodayAddedDisplay: "0.00",
+    selectedGoalHint: "",
     posterWidth: 750,
     posterHeight: 1334,
     isGeneratingPoster: false,
@@ -150,6 +295,7 @@ Page({
     const systemInfo = wx.getSystemInfoSync();
     this.setData({
       statusBarHeight: systemInfo.statusBarHeight,
+      today: this.formatDateForPicker(new Date()),
     });
     this.loadLocalData();
   },
@@ -232,6 +378,7 @@ Page({
     });
 
     if (newlyCompleted) {
+      this.saveLocalData();
       this.setData({
         showCelebration: true,
         celebrationGoalName: newlyCompleted,
@@ -252,10 +399,14 @@ Page({
     const totalSaved = goals.reduce((sum, item) => sum + Number(item.saved || 0), 0);
     const totalGoal = goals.reduce((sum, item) => sum + Number(item.target || 0), 0);
     const overallPercent = totalGoal > 0 ? Math.min(100, (totalSaved / totalGoal) * 100) : 0;
+    const todayKey = toDateKey();
 
     const monthKey = toMonthKey();
     const monthlyAdded = history
       .filter((item) => typeof item.date === "string" && item.date.startsWith(monthKey))
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const todaySaved = history
+      .filter((item) => item.date === todayKey)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const days = new Date().getDate();
@@ -280,17 +431,47 @@ Page({
       const remaining = Math.max(target - saved, 0);
       const remainingDays = calcRemainingDays(item.deadline);
       const progressColor = getProgressColor(percent);
+      const suggestedAmount = calcSuggestedAmount(item);
+      const todayAdded = history
+        .filter((record) => record.goalId === item.id && record.date === todayKey)
+        .reduce((sum, record) => sum + Number(record.amount || 0), 0);
+      const nextMilestonePercent = getNextMilestonePercent(percent);
+      const nextMilestoneAmount = nextMilestonePercent
+        ? Math.max(target * (nextMilestonePercent / 100) - saved, 0)
+        : 0;
+      const modeName = GOAL_MODES.find((mode) => mode.key === item.mode)?.name || "自由攒";
       return {
         ...item,
         percent: percent.toFixed(1),
         remaining,
         progressColor,
         remainingDays,
+        suggestedAmount,
+        todayAdded,
+        todayAddedDisplay: formatAmount(todayAdded),
+        suggestedAmountDisplay: formatAmount(suggestedAmount),
+        nextMilestonePercent,
+        nextMilestoneAmountDisplay: formatAmount(nextMilestoneAmount),
+        modeName,
+        actionText: todayAdded > 0
+          ? `今天已攒 ¥${formatAmount(todayAdded)}`
+          : `今天建议 ¥${formatAmount(suggestedAmount)}`,
+        milestoneText: nextMilestonePercent
+          ? `再存 ¥${formatAmount(nextMilestoneAmount)} 到 ${nextMilestonePercent}%`
+          : "继续记录，目标会越来越近",
         targetDisplay: formatAmount(target),
         remainingDisplay: formatAmount(remaining),
         savedDisplay: formatAmount(saved),
       };
     });
+
+    const rhythmBoard = buildRhythmDays(history);
+
+    const focusGoal = mappedGoals.find((item) => !item.completed) || mappedGoals[0] || null;
+    const selectedGoalId = mappedGoals.some((item) => item.id === this.data.selectedGoalId)
+      ? this.data.selectedGoalId
+      : (focusGoal ? focusGoal.id : 0);
+    const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
 
     this.checkAndUpdateAchievements();
     this.checkGoalCompletion();
@@ -306,6 +487,47 @@ Page({
       totalCheckInsDisplay: String(totalCheckIns),
       doneGoalsCountDisplay: String(doneGoals),
       dailyAvgDisplay: formatAmount(dailyAvg),
+      todaySavedDisplay: formatAmount(todaySaved),
+      rhythmDays: rhythmBoard.days,
+      rhythmActiveDaysDisplay: String(rhythmBoard.activeDays),
+      rhythmRecentAddedDisplay: formatAmount(rhythmBoard.recentTotal),
+      rhythmWeekCheckInsDisplay: String(rhythmBoard.weekCheckIns),
+      rhythmStatusText: rhythmBoard.weekCheckIns >= 5
+        ? "这周节奏很好，继续保持这股劲头。"
+        : (todaySaved > 0
+          ? "今天已经打卡，别让这条连续线断掉。"
+          : "今天补一笔，最近 28 天的记录会更漂亮。"),
+      focusGoalName: focusGoal ? focusGoal.name : "",
+      focusGoalId: focusGoal ? focusGoal.id : 0,
+      focusGoalPercentDisplay: focusGoal ? `${focusGoal.percent}%` : "0.0%",
+      focusGoalSavedDisplay: focusGoal ? focusGoal.savedDisplay : "0.00",
+      focusGoalTargetDisplay: focusGoal ? focusGoal.targetDisplay : "0.00",
+      focusGoalRemainingDisplay: focusGoal ? focusGoal.remainingDisplay : "0.00",
+      focusGoalRemainingDaysText: focusGoal
+        ? (focusGoal.remainingDays === null
+          ? "没设截止日，也建议给自己一个时间点"
+          : (focusGoal.remainingDays >= 0
+            ? `剩余 ${focusGoal.remainingDays} 天`
+            : "已经超过截止日，今天补一笔会更安心"))
+        : "",
+      focusGoalSuggestedAmountDisplay: focusGoal ? focusGoal.suggestedAmountDisplay : "0.00",
+      focusGoalTodayAddedDisplay: focusGoal ? focusGoal.todayAddedDisplay : "0.00",
+      focusGoalHint: focusGoal
+        ? (Number(focusGoal.todayAdded || 0) > 0
+          ? `今天已经为「${focusGoal.name}」存入 ¥${focusGoal.todayAddedDisplay}，继续保持这个节奏就很好。`
+          : `今天先存 ¥${focusGoal.suggestedAmountDisplay}，更容易按计划完成「${focusGoal.name}」。`)
+        : "",
+      focusGoalMilestoneText: focusGoal && focusGoal.nextMilestonePercent
+        ? `再存 ¥${focusGoal.nextMilestoneAmountDisplay}，就能到 ${focusGoal.nextMilestonePercent}%`
+        : "目标完成后会自动点亮勋章和庆祝动画",
+      selectedGoalId,
+      selectedGoalSuggestedAmountDisplay: selectedGoal ? selectedGoal.suggestedAmountDisplay : "0.00",
+      selectedGoalTodayAddedDisplay: selectedGoal ? selectedGoal.todayAddedDisplay : "0.00",
+      selectedGoalHint: selectedGoal
+        ? (Number(selectedGoal.todayAdded || 0) > 0
+          ? `今天已为这个目标存入 ¥${selectedGoal.todayAddedDisplay}`
+          : `建议先存 ¥${selectedGoal.suggestedAmountDisplay}`)
+        : "",
       achievements: this.localData.achievements,
     });
   },
@@ -315,10 +537,20 @@ Page({
   },
 
   onTapCheckIn() {
+    const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
     this.setData({
       showCheckInPopup: true,
       inputAmount: "0",
+      selectedGoalId: activeGoal ? activeGoal.id : this.data.selectedGoalId,
     });
+  },
+
+  onBottomPrimaryAction() {
+    if ((this.data.goals || []).length > 0) {
+      this.onTapCheckIn();
+      return;
+    }
+    this.onTapCreateGoal();
   },
 
   onClosePopup() {
@@ -342,15 +574,16 @@ Page({
   },
 
   onTapCreateGoal() {
-    const today = new Date();
-    const nextYear = new Date();
-    nextYear.setFullYear(today.getFullYear() + 1);
-    const formattedDate = this.formatDateForPicker(nextYear);
+    const defaults = getModeDefaults("free");
     this.setData({
       showCreateGoalPopup: true,
       createGoalName: "",
-      createGoalTarget: "",
-      createGoalDeadline: formattedDate,
+      createGoalTarget: defaults.target,
+      createGoalDeadline: this.formatDateForPicker(defaults.deadline),
+      createGoalMode: "free",
+      createGoalIcon: "",
+      createGoalColor: "",
+      createGoalAccentColor: "",
     });
   },
 
@@ -364,6 +597,9 @@ Page({
   onCloseCreateGoal() {
     this.setData({
       showCreateGoalPopup: false,
+      createGoalIcon: "",
+      createGoalColor: "",
+      createGoalAccentColor: "",
     });
   },
 
@@ -385,36 +621,29 @@ Page({
     });
   },
 
+  onSelectCreateGoalMode(e) {
+    const modeKey = String(e.currentTarget.dataset.mode || "free");
+    const defaults = getModeDefaults(modeKey);
+    this.setData({
+      createGoalMode: modeKey,
+      createGoalTarget: modeKey === "free" ? this.data.createGoalTarget : defaults.target,
+      createGoalDeadline: this.formatDateForPicker(defaults.deadline),
+    });
+  },
+
   onAddHotGoal(e) {
     const template = HOT_GOAL_TEMPLATES[e.currentTarget.dataset.index];
-    const today = new Date();
-    const nextYear = new Date();
-    nextYear.setFullYear(today.getFullYear() + 1);
-    const deadline = this.formatDateForPicker(nextYear);
-
-    const maxId = this.localData.goals.length > 0
-      ? Math.max(...this.localData.goals.map(g => g.id)) + 1
-      : 1;
-
-    const newGoal = {
-      id: maxId,
-      name: template.name,
-      icon: template.icon,
-      color: template.color,
-      accentColor: template.accentColor,
-      target: 0,
-      saved: 0,
-      deadline,
-      completed: false,
-    };
-
-    this.localData.goals.push(newGoal);
-    this.saveLocalData();
-    this.refreshDashboard();
-
-    wx.showToast({
-      title: "添加成功",
-      icon: "success",
+    const modeKey = template.name.includes("365") ? "daily" : (template.name.includes("52") ? "weekly" : "free");
+    const defaults = getModeDefaults(modeKey);
+    this.setData({
+      showCreateGoalPopup: true,
+      createGoalName: template.name,
+      createGoalTarget: defaults.target,
+      createGoalDeadline: this.formatDateForPicker(defaults.deadline),
+      createGoalMode: modeKey,
+      createGoalIcon: template.icon,
+      createGoalColor: template.color,
+      createGoalAccentColor: template.accentColor,
     });
   },
 
@@ -422,6 +651,7 @@ Page({
     const name = this.data.createGoalName.trim();
     const target = Number(this.data.createGoalTarget);
     const deadline = this.data.createGoalDeadline;
+    const mode = this.data.createGoalMode;
 
     if (!name) {
       wx.showToast({
@@ -459,12 +689,18 @@ Page({
     const newGoal = {
       id: maxId,
       name,
-      icon: randomIcon,
-      ...randomColor,
+      icon: this.data.createGoalIcon || randomIcon,
+      ...(this.data.createGoalColor && this.data.createGoalAccentColor
+        ? {
+          color: this.data.createGoalColor,
+          accentColor: this.data.createGoalAccentColor,
+        }
+        : randomColor),
       target,
       saved: 0,
       deadline,
       completed: false,
+      mode,
     };
 
     this.localData.goals.push(newGoal);
@@ -473,6 +709,9 @@ Page({
 
     this.setData({
       showCreateGoalPopup: false,
+      createGoalIcon: "",
+      createGoalColor: "",
+      createGoalAccentColor: "",
     });
 
     wx.showToast({
@@ -501,6 +740,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           this.localData.goals = this.localData.goals.filter(g => g.id !== id);
+          this.localData.history = (this.localData.history || []).filter(record => record.goalId !== id);
           this.saveLocalData();
           this.refreshDashboard();
           wx.showToast({
@@ -619,6 +859,14 @@ Page({
       showCheckInPopup: true,
       inputAmount: "0",
       selectedGoalId: id,
+    });
+  },
+
+  onUseSuggestedAmount() {
+    const amount = Number(this.data.selectedGoalSuggestedAmountDisplay.replace(/,/g, ""));
+    if (!amount) return;
+    this.setData({
+      inputAmount: String(amount),
     });
   },
 
@@ -898,7 +1146,7 @@ Page({
       this.setData({ isGeneratingPoster: false });
       wx.previewImage({
         urls: [posterTempFilePath],
-        current: posterTempFilePath,
+      current: posterTempFilePath,
       });
     } catch (err) {
       wx.hideLoading();

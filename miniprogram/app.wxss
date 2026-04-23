@@ -1,16 +1,21 @@
 /**app.wxss**/
 page {
-  background: #F4F6F9; /* 更中性的灰蓝色背景 */
-  color: #333333;
+  background: #F6F1EA;
+  color: #22313F;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', sans-serif;
-  --primary: #48C9B0; /* 清新薄荷绿，男女通吃 */
-  --primary-light: #E8F8F5;
-  --primary-gradient: linear-gradient(135deg, #A3E4D7 0%, #48C9B0 100%);
-  --text-main: #2C3E50; /* 深蓝灰，比暖咖色更中性 */
-  --text-sub: #7F8C8D;
-  --card-bg: rgba(255, 255, 255, 0.85);
-  --card-border: rgba(255, 255, 255, 0.9);
-  --card-shadow: 0 16rpx 40rpx rgba(72, 201, 176, 0.1);
+  --primary: #1E7F74;
+  --primary-strong: #14554E;
+  --primary-light: rgba(30, 127, 116, 0.10);
+  --primary-gradient: linear-gradient(135deg, #2FAE98 0%, #16695F 100%);
+  --accent: #F08A5D;
+  --accent-soft: rgba(240, 138, 93, 0.14);
+  --paper: rgba(255, 255, 255, 0.86);
+  --paper-strong: rgba(255, 255, 255, 0.96);
+  --text-main: #22313F;
+  --text-sub: #6D7A86;
+  --card-border: rgba(255, 255, 255, 0.72);
+  --card-shadow: 0 24rpx 60rpx rgba(31, 71, 85, 0.12);
+  --soft-shadow: 0 18rpx 42rpx rgba(30, 127, 116, 0.12);
 }
 
 .container {
