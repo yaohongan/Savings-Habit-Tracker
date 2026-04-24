@@ -477,116 +477,118 @@
   <!-- 打卡底部弹窗 (Bottom Sheet) -->
   <view class="popup-mask {{showCheckInPopup ? 'popup-mask-show' : ''}}" bindtap="onClosePopup"></view>
   
-  <view class="popup-content {{showCheckInPopup ? 'popup-content-show' : ''}}">
+  <view class="popup-content popup-content-checkin {{showCheckInPopup ? 'popup-content-show' : ''}}">
     <view class="popup-header">
       <text class="popup-title">记录一笔攒钱</text>
       <view class="popup-close" bindtap="onClosePopup">✕</view>
     </view>
 
-    <!-- 目标选择区 -->
-    <scroll-view scroll-x class="goal-selector" show-scrollbar="false">
-      <view 
-        wx:for="{{goals}}" 
-        wx:key="id" 
-        class="goal-pill {{selectedGoalId === item.id ? 'goal-pill-active' : ''}}"
-        data-id="{{item.id}}"
-        bindtap="onSelectGoal"
-      >
-        <text class="pill-emoji">{{item.icon}}</text>
-        <text class="pill-name">{{item.name}}</text>
+    <scroll-view scroll-y class="checkin-popup-scroll" show-scrollbar="false">
+      <!-- 目标选择区 -->
+      <scroll-view scroll-x class="goal-selector" show-scrollbar="false">
+        <view
+          wx:for="{{goals}}"
+          wx:key="id"
+          class="goal-pill {{selectedGoalId === item.id ? 'goal-pill-active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onSelectGoal"
+        >
+          <text class="pill-emoji">{{item.icon}}</text>
+          <text class="pill-name">{{item.name}}</text>
+        </view>
+        <view class="goal-pill goal-pill-add" bindtap="onTapCreateGoal">
+          <text class="pill-name">+ 新目标</text>
+        </view>
+      </scroll-view>
+
+      <view class="checkin-plan-tip" wx:if="{{selectedGoalId}}">
+        <view class="checkin-plan-copy">
+          <text class="checkin-plan-title">{{selectedGoalHint}}</text>
+          <text class="checkin-plan-sub">今天已存 ¥{{selectedGoalTodayAddedDisplay}}，想跟着计划走可以直接用建议金额。</text>
+        </view>
+        <view class="checkin-plan-btn" hover-class="hover-effect" bindtap="onUseSuggestedAmount">
+          <text>填入 ¥{{selectedGoalSuggestedAmountDisplay}}</text>
+        </view>
       </view>
-      <view class="goal-pill goal-pill-add" bindtap="onTapCreateGoal">
-        <text class="pill-name">+ 新目标</text>
+
+      <view class="checkin-note-card">
+        <view class="checkin-note-header">
+          <text class="checkin-note-title">给这笔钱留一句话</text>
+          <text class="checkin-note-desc">选填，但很适合以后回来翻</text>
+        </view>
+        <view class="mood-tag-list">
+          <view
+            wx:for="{{moodTags}}"
+            wx:key="key"
+            class="mood-tag {{selectedMoodKey === item.key ? 'mood-tag-active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectMoodTag"
+          >
+            <text>{{item.emoji}}</text>
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+        <view class="note-template-list">
+          <view
+            wx:for="{{noteTemplates}}"
+            wx:key="*this"
+            class="note-template-chip"
+            data-note="{{item}}"
+            bindtap="onUseNoteTemplate"
+          >
+            <text>{{item}}</text>
+          </view>
+        </view>
+        <input
+          class="note-input"
+          maxlength="30"
+          placeholder="比如：今天少点一杯奶茶，先为旅行基金存起来"
+          value="{{inputNote}}"
+          bindinput="onInputNote"
+        />
+      </view>
+
+      <!-- 快捷金额按钮 -->
+      <view class="quick-amounts">
+        <view
+          wx:for="{{quickAmounts}}"
+          wx:key="*this"
+          class="quick-amount-btn"
+          hover-class="quick-amount-hover"
+          data-amount="{{item}}"
+          bindtap="onQuickAmount"
+        >
+          ¥{{item}}
+        </view>
+      </view>
+
+      <!-- 金额输入显示区 -->
+      <view class="amount-display">
+        <text class="currency-symbol">¥</text>
+        <text class="amount-value {{inputAmount === '0' ? 'amount-placeholder' : ''}}">{{inputAmount}}</text>
+      </view>
+
+      <!-- 高颜值数字键盘 -->
+      <view class="keyboard-area">
+        <view class="keyboard-grid">
+          <view
+            wx:for="{{keyboardNum}}"
+            wx:key="*this"
+            class="key-btn"
+            hover-class="key-btn-hover"
+            data-key="{{item}}"
+            bindtap="onTapKey"
+          >
+            {{item}}
+          </view>
+        </view>
+        <view class="keyboard-action">
+          <view class="action-btn-date">今天 ▼</view>
+          <view class="action-btn-share" hover-class="hover-effect" bindtap="onGeneratePoster">海报</view>
+          <view class="action-btn-confirm" hover-class="hover-effect" bindtap="onConfirmCheckIn">打卡</view>
+        </view>
       </view>
     </scroll-view>
-
-    <view class="checkin-plan-tip" wx:if="{{selectedGoalId}}">
-      <view class="checkin-plan-copy">
-        <text class="checkin-plan-title">{{selectedGoalHint}}</text>
-        <text class="checkin-plan-sub">今天已存 ¥{{selectedGoalTodayAddedDisplay}}，想跟着计划走可以直接用建议金额。</text>
-      </view>
-      <view class="checkin-plan-btn" hover-class="hover-effect" bindtap="onUseSuggestedAmount">
-        <text>填入 ¥{{selectedGoalSuggestedAmountDisplay}}</text>
-      </view>
-    </view>
-
-    <view class="checkin-note-card">
-      <view class="checkin-note-header">
-        <text class="checkin-note-title">给这笔钱留一句话</text>
-        <text class="checkin-note-desc">选填，但很适合以后回来翻</text>
-      </view>
-      <view class="mood-tag-list">
-        <view
-          wx:for="{{moodTags}}"
-          wx:key="key"
-          class="mood-tag {{selectedMoodKey === item.key ? 'mood-tag-active' : ''}}"
-          data-key="{{item.key}}"
-          bindtap="onSelectMoodTag"
-        >
-          <text>{{item.emoji}}</text>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
-      <view class="note-template-list">
-        <view
-          wx:for="{{noteTemplates}}"
-          wx:key="*this"
-          class="note-template-chip"
-          data-note="{{item}}"
-          bindtap="onUseNoteTemplate"
-        >
-          <text>{{item}}</text>
-        </view>
-      </view>
-      <input
-        class="note-input"
-        maxlength="30"
-        placeholder="比如：今天少点一杯奶茶，先为旅行基金存起来"
-        value="{{inputNote}}"
-        bindinput="onInputNote"
-      />
-    </view>
-
-    <!-- 快捷金额按钮 -->
-    <view class="quick-amounts">
-      <view 
-        wx:for="{{quickAmounts}}" 
-        wx:key="*this" 
-        class="quick-amount-btn" 
-        hover-class="quick-amount-hover"
-        data-amount="{{item}}"
-        bindtap="onQuickAmount"
-      >
-        ¥{{item}}
-      </view>
-    </view>
-
-    <!-- 金额输入显示区 -->
-    <view class="amount-display">
-      <text class="currency-symbol">¥</text>
-      <text class="amount-value {{inputAmount === '0' ? 'amount-placeholder' : ''}}">{{inputAmount}}</text>
-    </view>
-
-    <!-- 高颜值数字键盘 -->
-    <view class="keyboard-area">
-      <view class="keyboard-grid">
-        <view 
-          wx:for="{{keyboardNum}}" 
-          wx:key="*this" 
-          class="key-btn" 
-          hover-class="key-btn-hover"
-          data-key="{{item}}"
-          bindtap="onTapKey"
-        >
-          {{item}}
-        </view>
-      </view>
-      <view class="keyboard-action">
-        <view class="action-btn-date">今天 ▼</view>
-        <view class="action-btn-share" hover-class="hover-effect" bindtap="onGeneratePoster">海报</view>
-        <view class="action-btn-confirm" hover-class="hover-effect" bindtap="onConfirmCheckIn">打卡</view>
-      </view>
-    </view>
   </view>
 
   <!-- 创建目标弹窗 -->

@@ -1415,16 +1415,36 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+.popup-content-checkin {
+  max-height: 88vh;
+  overflow: hidden;
+}
+
+.checkin-popup-scroll {
+  height: 74vh;
+  max-height: calc(88vh - 96rpx);
+  box-sizing: border-box;
+}
+
 .popup-content-show {
   transform: translateY(0);
   box-shadow: 0 -8rpx 40rpx rgba(0,0,0,0.1);
 }
 
 .popup-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 40rpx 40rpx 20rpx;
+}
+
+.popup-content-checkin .popup-header {
+  padding: 28rpx 40rpx 14rpx;
+  background: #FBFAF7;
+  border-radius: 54rpx 54rpx 0 0;
+  position: relative;
+  z-index: 2;
 }
 
 .popup-title {
@@ -1444,6 +1464,10 @@
   width: 100%;
   white-space: nowrap;
   padding: 10rpx 0 30rpx;
+}
+
+.popup-content-checkin .goal-selector {
+  padding: 8rpx 0 20rpx;
 }
 
 .goal-pill {
@@ -1502,6 +1526,11 @@
   box-shadow: 0 10rpx 24rpx rgba(34, 49, 63, 0.05);
 }
 
+.popup-content-checkin .checkin-plan-tip {
+  margin-bottom: 18rpx;
+  padding: 20rpx 22rpx;
+}
+
 .checkin-plan-copy {
   flex: 1;
 }
@@ -1537,6 +1566,11 @@
   border-radius: 28rpx;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10rpx 24rpx rgba(34, 49, 63, 0.05);
+}
+
+.popup-content-checkin .checkin-note-card {
+  margin-bottom: 18rpx;
+  padding: 20rpx 22rpx;
 }
 
 .checkin-note-header {
@@ -1621,6 +1655,10 @@
   padding: 40rpx 40rpx 60rpx;
 }
 
+.popup-content-checkin .amount-display {
+  padding: 24rpx 40rpx 34rpx;
+}
+
 .currency-symbol {
   font-size: 56rpx;
   font-weight: 600;
@@ -1635,6 +1673,14 @@
   color: #222;
 }
 
+.popup-content-checkin .amount-value {
+  font-size: 86rpx;
+}
+
+.popup-content-checkin .currency-symbol {
+  font-size: 48rpx;
+}
+
 .amount-placeholder {
   color: #CCC;
 }
@@ -1645,6 +1691,16 @@
   padding: 40rpx;
   border-radius: 48rpx 48rpx 0 0;
   display: flex;
+}
+
+.popup-content-checkin .keyboard-area {
+  padding: 28rpx 40rpx calc(28rpx + env(safe-area-inset-bottom));
+  border-radius: 40rpx 40rpx 0 0;
+}
+
+.popup-content-checkin .keyboard-grid,
+.popup-content-checkin .keyboard-action {
+  gap: 16rpx;
 }
 
 .keyboard-grid {
@@ -1667,6 +1723,12 @@
   font-family: 'DIN Alternate', sans-serif;
   color: #333;
   box-shadow: 0 6rpx 0 #E8ECEF;
+}
+
+.popup-content-checkin .key-btn,
+.popup-content-checkin .action-btn-date,
+.popup-content-checkin .action-btn-share {
+  height: 96rpx;
 }
 
 .key-btn-hover {
@@ -1737,6 +1799,10 @@
   justify-content: space-between;
   padding: 0 40rpx 20rpx;
   gap: 16rpx;
+}
+
+.popup-content-checkin .quick-amounts {
+  padding-bottom: 12rpx;
 }
 
 .quick-amount-btn {
