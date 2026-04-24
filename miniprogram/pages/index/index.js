@@ -11,11 +11,95 @@ const HOT_GOAL_TEMPLATES = [
   { name: "退休养老", icon: "🌴", color: "#EFEBE9", accentColor: "#8D6E63" },
 ];
 
+const CHALLENGE_SCRIPTS = [
+  {
+    name: "100天无痛攒钱",
+    subtitle: "每天少花一点，100 天看见结果",
+    icon: "🌱",
+    target: "3000",
+    days: 100,
+    mode: "daily",
+    color: "#EAF7EF",
+    accentColor: "#4FAF7B",
+    tip: "每天先存一小笔，不追求大额，只追求不断。",
+  },
+  {
+    name: "奶茶戒断基金",
+    subtitle: "少喝一杯，就给自己存一杯",
+    icon: "🥤",
+    target: "1800",
+    days: 90,
+    mode: "daily",
+    color: "#FFF1E7",
+    accentColor: "#F08A5D",
+    tip: "把想买奶茶的那一刻，变成点亮挑战墙的一格。",
+  },
+  {
+    name: "旅行出发基金",
+    subtitle: "为下一次出发提前攒路费",
+    icon: "🧳",
+    target: "5000",
+    days: 180,
+    mode: "daily",
+    color: "#EBF5FB",
+    accentColor: "#5DADE2",
+    tip: "每一笔都是离出发更近一点，适合截图分享进度。",
+  },
+  {
+    name: "发薪日先存",
+    subtitle: "工资到账，先把未来留出来",
+    icon: "💼",
+    target: "12000",
+    days: 365,
+    mode: "monthly",
+    color: "#E8F8F5",
+    accentColor: "#48C9B0",
+    tip: "每次发薪先存一笔，比月底剩多少再存更稳。",
+  },
+  {
+    name: "情侣旅行基金",
+    subtitle: "两个人一起攒一个目的地",
+    icon: "💑",
+    target: "8000",
+    days: 240,
+    mode: "weekly",
+    color: "#FCE4EC",
+    accentColor: "#EC407A",
+    tip: "适合互相提醒、一起截图复盘，但不用做复杂社交。",
+  },
+  {
+    name: "30天应急金",
+    subtitle: "先攒出一笔让自己安心的钱",
+    icon: "🛟",
+    target: "3000",
+    days: 30,
+    mode: "daily",
+    color: "#FDEDEC",
+    accentColor: "#FF7E79",
+    tip: "目标短、反馈快，适合第一次打开小程序的新用户。",
+  },
+];
+
 const GOAL_MODES = [
   { key: "free", name: "自由攒", desc: "先开始，想到就存一笔" },
   { key: "daily", name: "365天", desc: "适合每天打卡一点点" },
   { key: "weekly", name: "52周", desc: "适合每周固定存一次" },
   { key: "monthly", name: "每月定存", desc: "适合发薪日固定存钱" },
+];
+const CALENDAR_WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+const NOTE_TEMPLATES = ["今天忍住没乱花", "先为目标存一点", "发工资先存起来", "给未来的自己留一笔"];
+const MOOD_TAGS = [
+  { key: "steady", label: "稳稳存下", emoji: "🌿" },
+  { key: "restrain", label: "忍住乱花", emoji: "🙌" },
+  { key: "salary", label: "发薪先存", emoji: "💼" },
+  { key: "happy", label: "开心奖励", emoji: "✨" },
+  { key: "stress", label: "给点安全感", emoji: "🛟" },
+];
+
+const POSTER_THEMES = [
+  { key: "cream", name: "奶油日签", desc: "温柔复盘感", bgStart: "#E8F8F5", bgMid: "#EBF5FB", bgEnd: "#FDFBF7", accent: "#48C9B0", title: "#2C3E50", sub: "#7F8C8D" },
+  { key: "challenge", name: "深绿挑战", desc: "适合晒进度", bgStart: "#143D3A", bgMid: "#1D7369", bgEnd: "#F08A5D", accent: "#FFE2C5", title: "#FFFFFF", sub: "rgba(255,255,255,0.78)" },
+  { key: "sunset", name: "暖橙成就", desc: "适合达成时刻", bgStart: "#FFF1E7", bgMid: "#FFD7BF", bgEnd: "#FDFBF7", accent: "#F08A5D", title: "#5A3428", sub: "#9A6A55" },
 ];
 
 const KEYBOARD_NUM = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"];
@@ -56,9 +140,24 @@ function toMonthKey(date = new Date()) {
   return `${y}-${m}`;
 }
 
+function getMoodTagByKey(key) {
+  return MOOD_TAGS.find((item) => item.key === key) || MOOD_TAGS[0];
+}
+
+function getPosterThemeByKey(key) {
+  return POSTER_THEMES.find((item) => item.key === key) || POSTER_THEMES[0];
+}
+
+function parseDateKey(dateKey) {
+  if (!dateKey || typeof dateKey !== "string") return null;
+  const parts = dateKey.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((item) => Number.isNaN(item))) return null;
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
 function calcDayDiff(from, to) {
-  const fromDate = new Date(from);
-  const toDate = new Date(to);
+  const fromDate = parseDateKey(from) || new Date(from);
+  const toDate = parseDateKey(to) || new Date(to);
   const fromUtc = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
   const toUtc = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
   return Math.floor((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
@@ -73,6 +172,15 @@ function calcRemainingDays(deadline) {
   const diffMs = deadlineDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   return diffDays;
+}
+
+function getWeekStart(date = new Date()) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  const day = result.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  result.setDate(result.getDate() + offset);
+  return result;
 }
 
 function addDays(date, days) {
@@ -187,6 +295,308 @@ function buildRhythmDays(history = []) {
   };
 }
 
+function calcLongestActiveStreak(days = []) {
+  let longest = 0;
+  let current = 0;
+  days.forEach((item) => {
+    if (item.amount > 0) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  });
+  return longest;
+}
+
+function buildMonthlyCalendar(history = [], date = new Date()) {
+  const grouped = history.reduce((acc, item) => {
+    const key = item.date;
+    if (!key) return acc;
+    acc[key] = (acc[key] || 0) + Number(item.amount || 0);
+    return acc;
+  }, {});
+
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingEmpty = (firstDay.getDay() + 6) % 7;
+  const totalSlots = Math.ceil((leadingEmpty + daysInMonth) / 7) * 7;
+  const todayKey = toDateKey();
+  const monthDays = [];
+
+  for (let index = 0; index < totalSlots; index += 1) {
+    const day = index - leadingEmpty + 1;
+    if (day < 1 || day > daysInMonth) {
+      monthDays.push({
+        key: `empty-${index}`,
+        dayLabel: "",
+        amountDisplay: "0.00",
+        isCurrentMonth: false,
+        isToday: false,
+        levelClass: "calendar-level-empty",
+      });
+      continue;
+    }
+
+    const currentDate = new Date(year, month, day);
+    const key = toDateKey(currentDate);
+    const amount = grouped[key] || 0;
+    let level = 0;
+    if (amount >= 200) {
+      level = 3;
+    } else if (amount >= 50) {
+      level = 2;
+    } else if (amount > 0) {
+      level = 1;
+    }
+
+    monthDays.push({
+      key,
+      dayLabel: String(day),
+      amountDisplay: formatAmount(amount),
+      amount,
+      isCurrentMonth: true,
+      isToday: key === todayKey,
+      levelClass: `calendar-level-${level}`,
+    });
+  }
+
+  const activeDays = monthDays.filter((item) => item.isCurrentMonth && item.amount > 0).length;
+  const monthlyTotal = monthDays
+    .filter((item) => item.isCurrentMonth)
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const longestStreak = calcLongestActiveStreak(monthDays.filter((item) => item.isCurrentMonth));
+
+  return {
+    monthTitle: `${year} 年 ${month + 1} 月`,
+    days: monthDays,
+    activeDays,
+    monthlyTotal,
+    longestStreak,
+  };
+}
+
+function buildMonthlySummary(goals = [], history = [], achievements = {}, date = new Date()) {
+  const monthKey = toMonthKey(date);
+  const monthlyHistory = history.filter((item) => typeof item.date === "string" && item.date.startsWith(monthKey));
+  const activeDays = new Set(monthlyHistory.map((item) => item.date)).size;
+  const monthlyTotal = monthlyHistory.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const averagePerCheckIn = monthlyHistory.length > 0 ? monthlyTotal / monthlyHistory.length : 0;
+  const unlockedCount = Object.values(achievements || {}).filter(Boolean).length;
+  const daysSoFar = date.getDate();
+  const activeRate = daysSoFar > 0 ? (activeDays / daysSoFar) * 100 : 0;
+
+  const goalTotals = monthlyHistory.reduce((acc, item) => {
+    acc[item.goalId] = (acc[item.goalId] || 0) + Number(item.amount || 0);
+    return acc;
+  }, {});
+
+  let topGoalName = "还没有主力目标";
+  let topGoalAmount = 0;
+  Object.keys(goalTotals).forEach((goalId) => {
+    const amount = goalTotals[goalId];
+    if (amount <= topGoalAmount) return;
+    const goal = goals.find((item) => item.id === Number(goalId));
+    topGoalAmount = amount;
+    topGoalName = goal ? goal.name : "我的目标";
+  });
+
+  let insight = "这个月还没开始记一笔，今天先完成第一格。";
+  if (monthlyHistory.length > 0) {
+    if (activeRate >= 70) {
+      insight = "你这个月的攒钱节奏很稳，已经进入“看得见进步”的状态。";
+    } else if (activeRate >= 35) {
+      insight = "这个月已经形成一些节奏了，再把空白天填满一点会很漂亮。";
+    } else {
+      insight = "已经开了个好头，接下来更重要的是把记录变得连续。";
+    }
+  }
+
+  const reportText = [
+    `${date.getFullYear()} 年 ${date.getMonth() + 1} 月，我在小简攒钱打卡里已经打卡 ${activeDays} 天。`,
+    `本月累计攒下 ¥${formatAmount(monthlyTotal)}，单次平均 ¥${formatAmount(averagePerCheckIn)}。`,
+    topGoalAmount > 0 ? `这个月最投入的目标是「${topGoalName}」，已经存入 ¥${formatAmount(topGoalAmount)}。` : "这个月还没有形成主力目标，先从最想完成的一件事开始。",
+    `目前已解锁 ${unlockedCount} 个成就。`,
+  ].join("");
+
+  return {
+    activeDays,
+    monthlyTotal,
+    averagePerCheckIn,
+    unlockedCount,
+    topGoalName,
+    topGoalAmount,
+    insight,
+    reportText,
+    activeRate,
+  };
+}
+
+function buildWeeklySummary(goals = [], history = [], date = new Date()) {
+  const weekStart = getWeekStart(date);
+  const weekEnd = addDays(weekStart, 6);
+  const weekStartKey = toDateKey(weekStart);
+  const weekEndKey = toDateKey(weekEnd);
+  const weeklyHistory = history.filter((item) => (
+    typeof item.date === "string" && item.date >= weekStartKey && item.date <= weekEndKey
+  ));
+  const activeDays = new Set(weeklyHistory.map((item) => item.date)).size;
+  const weeklyTotal = weeklyHistory.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const averagePerDay = activeDays > 0 ? weeklyTotal / activeDays : 0;
+
+  const goalTotals = weeklyHistory.reduce((acc, item) => {
+    acc[item.goalId] = (acc[item.goalId] || 0) + Number(item.amount || 0);
+    return acc;
+  }, {});
+
+  let topGoalName = "还没有主力目标";
+  let topGoalAmount = 0;
+  Object.keys(goalTotals).forEach((goalId) => {
+    const amount = goalTotals[goalId];
+    if (amount <= topGoalAmount) return;
+    const goal = goals.find((item) => item.id === Number(goalId));
+    topGoalAmount = amount;
+    topGoalName = goal ? goal.name : "我的目标";
+  });
+
+  const moodCounts = weeklyHistory.reduce((acc, item) => {
+    const key = item.moodKey || "steady";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const topMoodKey = Object.keys(moodCounts).sort((a, b) => moodCounts[b] - moodCounts[a])[0] || "steady";
+  const topMood = getMoodTagByKey(topMoodKey);
+
+  let insight = "这周还没开始，先点亮今天这一格就够了。";
+  if (activeDays >= 5) {
+    insight = "这周节奏很稳，已经是一个值得晒出来的攒钱周了。";
+  } else if (activeDays >= 3) {
+    insight = "这周已经形成节奏，再补两天就会很好看。";
+  } else if (activeDays > 0) {
+    insight = "这周已经开局，接下来优先把打卡变连续。";
+  }
+
+  const reportText = [
+    `这周我在小简攒钱打卡里打卡 ${activeDays} 天，累计攒下 ¥${formatAmount(weeklyTotal)}。`,
+    topGoalAmount > 0 ? `本周最投入的是「${topGoalName}」，存入 ¥${formatAmount(topGoalAmount)}。` : "这周还没有主力目标，先从最想完成的一件事开始。",
+    `最常见的记录状态是「${topMood.emoji} ${topMood.label}」。`,
+    insight,
+  ].join("\n");
+
+  return {
+    activeDays,
+    weeklyTotal,
+    averagePerDay,
+    topGoalName,
+    topGoalAmount,
+    topMood,
+    insight,
+    reportText,
+    rangeText: `${weekStart.getMonth() + 1}.${weekStart.getDate()} - ${weekEnd.getMonth() + 1}.${weekEnd.getDate()}`,
+  };
+}
+
+function buildChallengeBoard(goals = [], history = [], date = new Date()) {
+  const todayKey = toDateKey(date);
+  const sortedHistory = [...history]
+    .filter((item) => item.date && parseDateKey(item.date))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const primaryGoal = goals.find((item) => item.mode === "daily" && !item.completed)
+    || goals.find((item) => !item.completed)
+    || goals[0]
+    || null;
+  const firstHistoryDate = sortedHistory[0] ? sortedHistory[0].date : "";
+  const inferredStart = primaryGoal && primaryGoal.createdAt
+    ? primaryGoal.createdAt
+    : (firstHistoryDate || todayKey);
+  const startDate = parseDateKey(inferredStart) || parseDateKey(todayKey) || new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  const grouped = sortedHistory.reduce((acc, item) => {
+    acc[item.date] = (acc[item.date] || 0) + Number(item.amount || 0);
+    return acc;
+  }, {});
+
+  const days = [];
+  let litDays = 0;
+  let totalAmount = 0;
+  const todayDiff = calcDayDiff(toDateKey(startDate), todayKey);
+  const elapsedDays = Math.max(1, Math.min(365, todayDiff + 1));
+
+  for (let index = 0; index < 365; index += 1) {
+    const currentDate = addDays(startDate, index);
+    const key = toDateKey(currentDate);
+    const amount = grouped[key] || 0;
+    const isLit = amount > 0;
+    const isToday = key === todayKey;
+    const isFuture = index >= elapsedDays;
+
+    if (isLit) {
+      litDays += 1;
+      totalAmount += amount;
+    }
+
+    let level = 0;
+    if (amount >= 200) {
+      level = 3;
+    } else if (amount >= 50) {
+      level = 2;
+    } else if (amount > 0) {
+      level = 1;
+    }
+
+    days.push({
+      key,
+      index: index + 1,
+      amount,
+      isLit,
+      isToday,
+      isFuture,
+      levelClass: `challenge-level-${level}`,
+    });
+  }
+
+  const percent = Math.min(100, (litDays / 365) * 100);
+  const leftDays = Math.max(365 - litDays, 0);
+  const todayAmount = grouped[todayKey] || 0;
+  const challengeName = primaryGoal ? primaryGoal.name : "我的 365 天攒钱挑战";
+  const startText = `${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, "0")}.${String(startDate.getDate()).padStart(2, "0")}`;
+
+  let statusText = "先点亮第一格，长期坚持就有了一个看得见的开头。";
+  if (litDays >= 100) {
+    statusText = "已经点亮 100 格以上，这面墙很适合拿去晒一下。";
+  } else if (litDays >= 30) {
+    statusText = "已经坚持过一个月了，接下来要做的是让点亮墙越来越密。";
+  } else if (litDays >= 7) {
+    statusText = "一周节奏已经建立，继续把空格一点点补上。";
+  } else if (todayAmount > 0) {
+    statusText = "今天已经点亮，明天再来，这个挑战就开始变厚了。";
+  }
+
+  const shareText = [
+    `我正在小简攒钱打卡完成「${challengeName}」。`,
+    `365 天挑战已经点亮 ${litDays} 格，累计攒下 ¥${formatAmount(totalAmount)}。`,
+    `从 ${startText} 开始，把想要的生活一格一格存出来。`,
+  ].join("\n");
+
+  return {
+    days,
+    litDays,
+    totalAmount,
+    percent,
+    leftDays,
+    elapsedDays,
+    todayAmount,
+    todayLit: todayAmount > 0,
+    startText,
+    statusText,
+    shareText,
+    challengeName,
+  };
+}
+
 function getProgressColor(percent) {
   if (percent >= 100) return "#FFD700";
   if (percent >= 80) return "#4CAF50";
@@ -209,6 +619,37 @@ function drawRoundRectPath(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+function getBaseLocalData() {
+  return {
+    goals: [],
+    history: [],
+    streak: 0,
+    lastCheckInDate: "",
+    achievements: {
+      firstDeposit: false,
+      thousandTotal: false,
+      tenThousandTotal: false,
+      sevenDaysStreak: false,
+      thirtyDaysStreak: false,
+      oneGoalDone: false,
+      fiveGoalsDone: false,
+    },
+  };
+}
+
+function normalizeLocalData(local) {
+  const base = getBaseLocalData();
+  const source = local && typeof local === "object" ? local : {};
+  return {
+    ...base,
+    ...source,
+    achievements: {
+      ...base.achievements,
+      ...(source.achievements || {}),
+    },
+  };
+}
+
 Page({
   data: {
     statusBarHeight: 20,
@@ -217,7 +658,11 @@ Page({
     showEditGoalPopup: false,
     showHistoryPopup: false,
     showAchievementsPopup: false,
+    showBackupPopup: false,
+    showReviewPanel: false,
     inputAmount: "0",
+    inputNote: "",
+    selectedMoodKey: "steady",
     selectedGoalId: 1,
     editingGoalId: null,
     today: "",
@@ -228,6 +673,8 @@ Page({
     createGoalIcon: "",
     createGoalColor: "",
     createGoalAccentColor: "",
+    createGoalScriptTip: "",
+    createGoalScriptName: "",
     editGoalName: "",
     editGoalTarget: "",
     editGoalDeadline: "",
@@ -236,7 +683,11 @@ Page({
     celebrationGoalName: "",
     keyboardNum: KEYBOARD_NUM,
     quickAmounts: QUICK_AMOUNTS,
+    noteTemplates: NOTE_TEMPLATES,
+    moodTags: MOOD_TAGS,
+    posterThemes: POSTER_THEMES,
     hotGoalTemplates: HOT_GOAL_TEMPLATES,
+    challengeScripts: CHALLENGE_SCRIPTS,
     goalModes: GOAL_MODES,
     goals: [],
     totalSavedDisplay: "0.00",
@@ -254,6 +705,46 @@ Page({
     rhythmRecentAddedDisplay: "0.00",
     rhythmWeekCheckInsDisplay: "0",
     rhythmStatusText: "",
+    calendarWeekdays: CALENDAR_WEEKDAYS,
+    calendarMonthTitle: "",
+    calendarDays: [],
+    calendarActiveDaysDisplay: "0",
+    calendarMonthlyAddedDisplay: "0.00",
+    calendarLongestStreakDisplay: "0",
+    calendarStatusText: "",
+    monthlySummaryDaysDisplay: "0",
+    monthlySummaryAmountDisplay: "0.00",
+    monthlySummaryAverageDisplay: "0.00",
+    monthlySummaryUnlockedDisplay: "0",
+    monthlySummaryTopGoalName: "",
+    monthlySummaryTopGoalAmountDisplay: "0.00",
+    monthlySummaryInsight: "",
+    monthlySummaryReportText: "",
+    weeklySummaryRangeText: "",
+    weeklySummaryDaysDisplay: "0",
+    weeklySummaryAmountDisplay: "0.00",
+    weeklySummaryAverageDisplay: "0.00",
+    weeklySummaryTopGoalName: "",
+    weeklySummaryTopGoalAmountDisplay: "0.00",
+    weeklySummaryMoodText: "",
+    weeklySummaryInsight: "",
+    weeklySummaryReportText: "",
+    supervisionShareText: "",
+    challengeDays: [],
+    challengeLitDaysDisplay: "0",
+    challengePercent: 0,
+    challengePercentDisplay: "0.0%",
+    challengeTotalAmountDisplay: "0.00",
+    challengeLeftDaysDisplay: "365",
+    challengeElapsedDaysDisplay: "1",
+    challengeTodayStateText: "",
+    challengeTodayDone: false,
+    challengeStartText: "",
+    challengeStatusText: "",
+    challengeShareText: "",
+    challengeName: "",
+    backupPayload: "",
+    backupInput: "",
     focusGoalName: "",
     focusGoalId: 0,
     focusGoalPercentDisplay: "0.0%",
@@ -271,6 +762,7 @@ Page({
     posterWidth: 750,
     posterHeight: 1334,
     isGeneratingPoster: false,
+    posterThemeKey: "challenge",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -302,24 +794,7 @@ Page({
 
   loadLocalData() {
     const local = wx.getStorageSync(STORAGE_KEY);
-    const base = {
-      goals: [],
-      history: [],
-      streak: 0,
-      lastCheckInDate: "",
-      achievements: {
-        firstDeposit: false,
-        thousandTotal: false,
-        tenThousandTotal: false,
-        sevenDaysStreak: false,
-        thirtyDaysStreak: false,
-        oneGoalDone: false,
-        fiveGoalsDone: false,
-      },
-    };
-    const data = local && typeof local === "object" ? { ...base, ...local } : base;
-
-    this.localData = data;
+    this.localData = normalizeLocalData(local);
     this.refreshDashboard();
   },
 
@@ -396,6 +871,9 @@ Page({
   refreshDashboard() {
     const goals = this.localData.goals || [];
     const history = this.localData.history || [];
+    this.checkGoalCompletion();
+    this.checkAndUpdateAchievements();
+
     const totalSaved = goals.reduce((sum, item) => sum + Number(item.saved || 0), 0);
     const totalGoal = goals.reduce((sum, item) => sum + Number(item.target || 0), 0);
     const overallPercent = totalGoal > 0 ? Math.min(100, (totalSaved / totalGoal) * 100) : 0;
@@ -440,6 +918,11 @@ Page({
         ? Math.max(target * (nextMilestonePercent / 100) - saved, 0)
         : 0;
       const modeName = GOAL_MODES.find((mode) => mode.key === item.mode)?.name || "自由攒";
+      const scriptStatusText = item.scriptName
+        ? (percent >= 100
+          ? "剧本已完成，可以复制一段达成文案去晒成果。"
+          : `剧本进度 ${percent.toFixed(1)}%，继续把这个场景坚持到底。`)
+        : "";
       return {
         ...item,
         percent: percent.toFixed(1),
@@ -462,19 +945,28 @@ Page({
         targetDisplay: formatAmount(target),
         remainingDisplay: formatAmount(remaining),
         savedDisplay: formatAmount(saved),
+        scriptStatusText,
       };
     });
 
     const rhythmBoard = buildRhythmDays(history);
+    const monthlyCalendar = buildMonthlyCalendar(history);
+    const monthlySummary = buildMonthlySummary(goals, history, this.localData.achievements, new Date());
+    const weeklySummary = buildWeeklySummary(goals, history, new Date());
+    const challengeBoard = buildChallengeBoard(goals, history, new Date());
 
     const focusGoal = mappedGoals.find((item) => !item.completed) || mappedGoals[0] || null;
     const selectedGoalId = mappedGoals.some((item) => item.id === this.data.selectedGoalId)
       ? this.data.selectedGoalId
       : (focusGoal ? focusGoal.id : 0);
     const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
-
-    this.checkAndUpdateAchievements();
-    this.checkGoalCompletion();
+    const supervisionShareText = focusGoal
+      ? [
+        `我正在小简攒钱打卡坚持「${focusGoal.name}」。`,
+        `现在进度 ${focusGoal.percent}%，365 点亮挑战已点亮 ${challengeBoard.litDays} 格。`,
+        `你可以隔几天问我一句：今天点亮了吗？`,
+      ].join("\n")
+      : "";
 
     this.setData({
       goals: mappedGoals,
@@ -497,6 +989,47 @@ Page({
         : (todaySaved > 0
           ? "今天已经打卡，别让这条连续线断掉。"
           : "今天补一笔，最近 28 天的记录会更漂亮。"),
+      calendarMonthTitle: monthlyCalendar.monthTitle,
+      calendarDays: monthlyCalendar.days,
+      calendarActiveDaysDisplay: String(monthlyCalendar.activeDays),
+      calendarMonthlyAddedDisplay: formatAmount(monthlyCalendar.monthlyTotal),
+      calendarLongestStreakDisplay: String(monthlyCalendar.longestStreak),
+      calendarStatusText: monthlyCalendar.activeDays >= 10
+        ? "这个月已经进入稳定节奏了，继续把空白格子慢慢点亮。"
+        : (monthlyCalendar.activeDays > 0
+          ? "这个月已经开始了，尽量把打卡分布得更均匀一点。"
+          : "这个月还没留下记录，今天就是一个很好的开始。"),
+      monthlySummaryDaysDisplay: String(monthlySummary.activeDays),
+      monthlySummaryAmountDisplay: formatAmount(monthlySummary.monthlyTotal),
+      monthlySummaryAverageDisplay: formatAmount(monthlySummary.averagePerCheckIn),
+      monthlySummaryUnlockedDisplay: String(monthlySummary.unlockedCount),
+      monthlySummaryTopGoalName: monthlySummary.topGoalName,
+      monthlySummaryTopGoalAmountDisplay: formatAmount(monthlySummary.topGoalAmount),
+      monthlySummaryInsight: monthlySummary.insight,
+      monthlySummaryReportText: monthlySummary.reportText,
+      weeklySummaryRangeText: weeklySummary.rangeText,
+      weeklySummaryDaysDisplay: String(weeklySummary.activeDays),
+      weeklySummaryAmountDisplay: formatAmount(weeklySummary.weeklyTotal),
+      weeklySummaryAverageDisplay: formatAmount(weeklySummary.averagePerDay),
+      weeklySummaryTopGoalName: weeklySummary.topGoalName,
+      weeklySummaryTopGoalAmountDisplay: formatAmount(weeklySummary.topGoalAmount),
+      weeklySummaryMoodText: `${weeklySummary.topMood.emoji} ${weeklySummary.topMood.label}`,
+      weeklySummaryInsight: weeklySummary.insight,
+      weeklySummaryReportText: weeklySummary.reportText,
+      supervisionShareText,
+      challengeDays: challengeBoard.days,
+      challengeLitDaysDisplay: String(challengeBoard.litDays),
+      challengePercent: Number(challengeBoard.percent.toFixed(2)),
+      challengePercentDisplay: `${challengeBoard.percent.toFixed(1)}%`,
+      challengeTotalAmountDisplay: formatAmount(challengeBoard.totalAmount),
+      challengeLeftDaysDisplay: String(challengeBoard.leftDays),
+      challengeElapsedDaysDisplay: String(challengeBoard.elapsedDays),
+      challengeTodayStateText: challengeBoard.todayLit ? "今日已点亮" : "今日待点亮",
+      challengeTodayDone: challengeBoard.todayLit,
+      challengeStartText: challengeBoard.startText,
+      challengeStatusText: challengeBoard.statusText,
+      challengeShareText: challengeBoard.shareText,
+      challengeName: challengeBoard.challengeName,
       focusGoalName: focusGoal ? focusGoal.name : "",
       focusGoalId: focusGoal ? focusGoal.id : 0,
       focusGoalPercentDisplay: focusGoal ? `${focusGoal.percent}%` : "0.0%",
@@ -541,6 +1074,8 @@ Page({
     this.setData({
       showCheckInPopup: true,
       inputAmount: "0",
+      inputNote: "",
+      selectedMoodKey: "steady",
       selectedGoalId: activeGoal ? activeGoal.id : this.data.selectedGoalId,
     });
   },
@@ -556,6 +1091,8 @@ Page({
   onClosePopup() {
     this.setData({
       showCheckInPopup: false,
+      inputNote: "",
+      selectedMoodKey: "steady",
     });
   },
 
@@ -573,6 +1110,26 @@ Page({
     });
   },
 
+  onInputNote(e) {
+    this.setData({
+      inputNote: e.detail.value,
+    });
+  },
+
+  onUseNoteTemplate(e) {
+    const note = String(e.currentTarget.dataset.note || "");
+    this.setData({
+      inputNote: note,
+    });
+  },
+
+  onSelectMoodTag(e) {
+    const key = String(e.currentTarget.dataset.key || "steady");
+    this.setData({
+      selectedMoodKey: key,
+    });
+  },
+
   onTapCreateGoal() {
     const defaults = getModeDefaults("free");
     this.setData({
@@ -584,6 +1141,8 @@ Page({
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
+      createGoalScriptTip: "",
+      createGoalScriptName: "",
     });
   },
 
@@ -600,6 +1159,8 @@ Page({
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
+      createGoalScriptTip: "",
+      createGoalScriptName: "",
     });
   },
 
@@ -626,6 +1187,8 @@ Page({
     const defaults = getModeDefaults(modeKey);
     this.setData({
       createGoalMode: modeKey,
+      createGoalScriptTip: "",
+      createGoalScriptName: "",
       createGoalTarget: modeKey === "free" ? this.data.createGoalTarget : defaults.target,
       createGoalDeadline: this.formatDateForPicker(defaults.deadline),
     });
@@ -644,6 +1207,26 @@ Page({
       createGoalIcon: template.icon,
       createGoalColor: template.color,
       createGoalAccentColor: template.accentColor,
+      createGoalScriptTip: "",
+      createGoalScriptName: "",
+    });
+  },
+
+  onUseChallengeScript(e) {
+    const script = CHALLENGE_SCRIPTS[e.currentTarget.dataset.index];
+    if (!script) return;
+
+    this.setData({
+      showCreateGoalPopup: true,
+      createGoalName: script.name,
+      createGoalTarget: script.target,
+      createGoalDeadline: this.formatDateForPicker(addDays(new Date(), script.days)),
+      createGoalMode: script.mode,
+      createGoalIcon: script.icon,
+      createGoalColor: script.color,
+      createGoalAccentColor: script.accentColor,
+      createGoalScriptTip: script.tip,
+      createGoalScriptName: script.name,
     });
   },
 
@@ -701,6 +1284,9 @@ Page({
       deadline,
       completed: false,
       mode,
+      createdAt: toDateKey(),
+      scriptName: this.data.createGoalScriptName,
+      scriptTip: this.data.createGoalScriptTip,
     };
 
     this.localData.goals.push(newGoal);
@@ -712,6 +1298,8 @@ Page({
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
+      createGoalScriptTip: "",
+      createGoalScriptName: "",
     });
 
     wx.showToast({
@@ -729,6 +1317,97 @@ Page({
   onCloseAchievements() {
     this.setData({
       showAchievementsPopup: false,
+    });
+  },
+
+  onOpenBackup() {
+    const payload = JSON.stringify({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      app: "小简攒钱打卡",
+      data: this.localData,
+    });
+    this.setData({
+      showBackupPopup: true,
+      backupPayload: payload,
+      backupInput: "",
+    });
+  },
+
+  onCloseBackup() {
+    this.setData({
+      showBackupPopup: false,
+      backupInput: "",
+    });
+  },
+
+  onInputBackupRestore(e) {
+    this.setData({
+      backupInput: e.detail.value,
+    });
+  },
+
+  onCopyBackup() {
+    wx.setClipboardData({
+      data: this.data.backupPayload,
+      success: () => {
+        wx.showToast({
+          title: "备份内容已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onRestoreBackup() {
+    const input = (this.data.backupInput || "").trim();
+    if (!input) {
+      wx.showToast({
+        title: "请先粘贴备份内容",
+        icon: "none",
+      });
+      return;
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(input);
+    } catch (err) {
+      wx.showToast({
+        title: "备份内容格式不对",
+        icon: "none",
+      });
+      return;
+    }
+
+    const restored = parsed && parsed.data && typeof parsed.data === "object"
+      ? parsed.data
+      : (parsed && Array.isArray(parsed.goals) && Array.isArray(parsed.history) ? parsed : null);
+    if (!restored) {
+      wx.showToast({
+        title: "没有识别到可恢复数据",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.showModal({
+      title: "确认恢复",
+      content: "恢复会覆盖当前本地数据，请确认已经备份。",
+      success: (res) => {
+        if (!res.confirm) return;
+        this.localData = normalizeLocalData(restored);
+        this.saveLocalData();
+        this.refreshDashboard();
+        this.setData({
+          showBackupPopup: false,
+          backupInput: "",
+        });
+        wx.showToast({
+          title: "恢复成功",
+          icon: "success",
+        });
+      },
     });
   },
 
@@ -858,6 +1537,8 @@ Page({
     this.setData({
       showCheckInPopup: true,
       inputAmount: "0",
+      inputNote: "",
+      selectedMoodKey: "steady",
       selectedGoalId: id,
     });
   },
@@ -910,6 +1591,8 @@ Page({
 
   onConfirmCheckIn() {
     const amount = Number(this.data.inputAmount);
+    const note = (this.data.inputNote || "").trim();
+    const mood = getMoodTagByKey(this.data.selectedMoodKey);
     if (!amount || amount <= 0) {
       wx.showToast({
         title: "请输入有效金额",
@@ -933,6 +1616,10 @@ Page({
       amount,
       goalId,
       date: toDateKey(),
+      note,
+      moodKey: mood.key,
+      moodLabel: mood.label,
+      moodEmoji: mood.emoji,
     });
 
     const today = toDateKey();
@@ -955,11 +1642,134 @@ Page({
     this.setData({
       showCheckInPopup: false,
       inputAmount: "0",
+      inputNote: "",
+      selectedMoodKey: "steady",
     });
 
     wx.showToast({
       title: "打卡成功",
       icon: "success",
+    });
+  },
+
+  onCopyMonthlySummary() {
+    if (!this.data.monthlySummaryReportText) {
+      wx.showToast({
+        title: "本月还没有可复制的小结",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: this.data.monthlySummaryReportText,
+      success: () => {
+        wx.showToast({
+          title: "本月小结已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onCopyWeeklyReport() {
+    if (!this.data.weeklySummaryReportText) {
+      wx.showToast({
+        title: "这周还没有可复制的周报",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: this.data.weeklySummaryReportText,
+      success: () => {
+        wx.showToast({
+          title: "本周周报已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onCopyChallengeShare() {
+    if (!this.data.challengeShareText) {
+      wx.showToast({
+        title: "还没有挑战文案",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: this.data.challengeShareText,
+      success: () => {
+        wx.showToast({
+          title: "挑战文案已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onCopySupervisionShare() {
+    if (!this.data.supervisionShareText) {
+      wx.showToast({
+        title: "先创建一个目标",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: this.data.supervisionShareText,
+      success: () => {
+        wx.showToast({
+          title: "监督文案已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onCopyGoalScriptShare(e) {
+    const id = Number(e.currentTarget.dataset.id);
+    const goal = (this.data.goals || []).find((item) => item.id === id);
+    if (!goal) return;
+
+    const text = goal.completed
+      ? [
+        `我完成了「${goal.scriptName || goal.name}」攒钱挑战。`,
+        `目标 ¥${goal.targetDisplay}，已经攒下 ¥${goal.savedDisplay}。`,
+        "原来想要的生活，真的可以一格一格存出来。",
+      ].join("\n")
+      : [
+        `我正在完成「${goal.scriptName || goal.name}」攒钱挑战。`,
+        `目前进度 ${goal.percent}%，已攒 ¥${goal.savedDisplay} / ¥${goal.targetDisplay}。`,
+        goal.scriptTip || "今天也先存一点，把目标慢慢点亮。",
+      ].join("\n");
+
+    wx.setClipboardData({
+      data: text,
+      success: () => {
+        wx.showToast({
+          title: goal.completed ? "达成文案已复制" : "进度文案已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onSelectPosterTheme(e) {
+    const key = String(e.currentTarget.dataset.key || "cream");
+    this.setData({
+      posterThemeKey: key,
+    });
+  },
+
+  onToggleReviewPanel() {
+    this.setData({
+      showReviewPanel: !this.data.showReviewPanel,
     });
   },
 
@@ -994,6 +1804,7 @@ Page({
     wx.showLoading({ title: "生成海报中..." });
 
     try {
+      const posterTheme = getPosterThemeByKey(this.data.posterThemeKey);
       const now = new Date();
       const monthArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const dateText = `${String(now.getDate()).padStart(2, "0")} ${monthArr[now.getMonth()]} ${now.getFullYear()}`;
@@ -1011,115 +1822,155 @@ Page({
       const w = POSTER_WIDTH;
       const h = POSTER_HEIGHT;
 
-      // 1. 绘制极光水彩渐变背景 (中性冷暖交织)
       const bgGradient = ctx.createLinearGradient(0, 0, w, h);
-      bgGradient.addColorStop(0, "#E8F8F5");
-      bgGradient.addColorStop(0.4, "#EBF5FB");
-      bgGradient.addColorStop(1, "#FDFBF7");
+      bgGradient.addColorStop(0, posterTheme.bgStart);
+      bgGradient.addColorStop(0.46, posterTheme.bgMid);
+      bgGradient.addColorStop(1, posterTheme.bgEnd);
       ctx.setFillStyle(bgGradient);
       ctx.fillRect(0, 0, w, h);
 
       ctx.beginPath();
-      ctx.arc(100, 200, 300, 0, 2 * Math.PI);
-      ctx.setFillStyle("rgba(163, 228, 215, 0.4)");
+      ctx.arc(80, 210, 320, 0, 2 * Math.PI);
+      ctx.setFillStyle(posterTheme.key === "challenge" ? "rgba(255, 226, 197, 0.18)" : "rgba(255, 255, 255, 0.46)");
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(650, 900, 400, 0, 2 * Math.PI);
-      ctx.setFillStyle("rgba(174, 214, 241, 0.4)");
+      ctx.arc(720, 980, 460, 0, 2 * Math.PI);
+      ctx.setFillStyle(posterTheme.key === "challenge" ? "rgba(255, 255, 255, 0.12)" : "rgba(30, 127, 116, 0.10)");
       ctx.fill();
 
-      // 2. 顶部装饰文字
-      ctx.setFillStyle("#7F8C8D");
-      ctx.setFontSize(28);
+      const isDarkPoster = posterTheme.key === "challenge";
+      const heroTextColor = isDarkPoster ? "#FFFFFF" : posterTheme.title;
+      const heroSubColor = isDarkPoster ? "rgba(255,255,255,0.76)" : posterTheme.sub;
+      const cardBg = isDarkPoster ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.88)";
+      const cardText = "#22313F";
+
       ctx.setTextAlign("left");
-      ctx.fillText("X I A O J I A N", 60, 100);
+      ctx.setFillStyle(heroSubColor);
       ctx.setFontSize(24);
-      ctx.fillText("RECORD YOUR SHINING MOMENTS", 60, 140);
+      ctx.fillText("小简攒钱打卡", 56, 76);
+      ctx.setFillStyle(heroTextColor);
+      ctx.setFontSize(50);
+      ctx.fillText("我的 365 点亮墙", 56, 142);
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(24);
+      ctx.fillText(`${dateText} · ${posterTheme.name}`, 56, 184);
 
       ctx.setTextAlign("right");
-      ctx.setFontSize(40);
-      ctx.setFillStyle("#2C3E50");
-      ctx.fillText(dateText, w - 60, 100);
+      ctx.setFillStyle(heroTextColor);
+      ctx.setFontSize(28);
+      ctx.fillText(dayText, w - 56, 82);
+      drawRoundRectPath(ctx, w - 218, 108, 162, 58, 29);
+      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(30,127,116,0.12)");
+      ctx.fill();
+      ctx.setTextAlign("center");
+      ctx.setFillStyle(heroTextColor);
       ctx.setFontSize(24);
-      ctx.setFillStyle("#7F8C8D");
-      ctx.fillText(dayText, w - 60, 140);
+      ctx.fillText("攒钱挑战中", w - 137, 146);
 
-      // 3. 绘制玻璃拟态卡片 (主体)
+      ctx.setTextAlign("left");
+      ctx.setFillStyle(heroTextColor);
+      ctx.setFontSize(106);
+      ctx.fillText(this.data.challengeLitDaysDisplay, 56, 300);
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(34);
+      ctx.fillText("/ 365 格已点亮", 250, 292);
+
+      drawRoundRectPath(ctx, 56, 328, w - 112, 18, 9);
+      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.56)");
+      ctx.fill();
+      drawRoundRectPath(ctx, 56, 328, Math.max(18, (w - 112) * (Number(this.data.challengePercent || 0) / 100)), 18, 9);
+      const progressGradient = ctx.createLinearGradient(56, 328, w - 56, 346);
+      progressGradient.addColorStop(0, posterTheme.accent);
+      progressGradient.addColorStop(1, "#FFFFFF");
+      ctx.setFillStyle(progressGradient);
+      ctx.fill();
+
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(26);
+      ctx.fillText(`从 ${this.data.challengeStartText || "今天"} 开始，把想要的生活一格一格存出来`, 56, 392);
+
       ctx.save();
-      ctx.setShadow(0, 20, 60, "rgba(72, 201, 176, 0.1)");
-      drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
-      ctx.setFillStyle("rgba(255, 255, 255, 0.9)");
+      ctx.setShadow(0, 22, 66, isDarkPoster ? "rgba(0,0,0,0.18)" : "rgba(31,71,85,0.12)");
+      drawRoundRectPath(ctx, 48, 430, w - 96, 410, 44);
+      ctx.setFillStyle(cardBg);
       ctx.fill();
       ctx.restore();
 
-      drawRoundRect(ctx, 50, 220, w - 100, 780, 48);
-      ctx.setLineWidth(2);
-      ctx.setStrokeStyle("rgba(255, 255, 255, 1)");
-      ctx.stroke();
+      ctx.setFillStyle(cardText);
+      ctx.setFontSize(30);
+      ctx.fillText("365 DAY SAVING WALL", 88, 494);
+      ctx.setFillStyle("#6D7A86");
+      ctx.setFontSize(22);
+      ctx.fillText("每一个亮点，都是一次认真存下来的选择", 88, 532);
 
-      // 4. 卡片内部排版
-      ctx.setFillStyle("rgba(72, 201, 176, 0.15)");
-      ctx.setFontSize(180);
+      const challengeDaysForPoster = (this.data.challengeDays || []).slice(0, 365);
+      const cols = 25;
+      const dotSize = 12;
+      const dotGap = 10;
+      const gridX = 88;
+      const gridY = 570;
+      challengeDaysForPoster.forEach((day, index) => {
+        const x = gridX + (index % cols) * (dotSize + dotGap);
+        const y = gridY + Math.floor(index / cols) * (dotSize + dotGap);
+        if (day.isLit) {
+          ctx.setFillStyle(day.amount >= 200 ? "#14554E" : (day.amount >= 50 ? "#2FAE98" : posterTheme.accent));
+        } else if (day.isFuture) {
+          ctx.setFillStyle("#EEF2F4");
+        } else {
+          ctx.setFillStyle("#DDE5E7");
+        }
+        drawRoundRectPath(ctx, x, y, dotSize, dotSize, 4);
+        ctx.fill();
+      });
+
+      const statY = 880;
+      const statWidth = 196;
+      const statGap = 24;
+      const stats = [
+        { label: "累计攒下", value: `¥${this.data.challengeTotalAmountDisplay}` },
+        { label: "连续打卡", value: `${this.data.streakDisplay} 天` },
+        { label: "本周打卡", value: `${this.data.weeklySummaryDaysDisplay} 天` },
+      ];
+      stats.forEach((item, index) => {
+        const x = 48 + index * (statWidth + statGap);
+        drawRoundRectPath(ctx, x, statY, statWidth, 138, 30);
+        ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.76)");
+        ctx.fill();
+        ctx.setTextAlign("center");
+        ctx.setFillStyle(heroTextColor);
+        ctx.setFontSize(34);
+        ctx.fillText(item.value, x + statWidth / 2, statY + 56);
+        ctx.setFillStyle(heroSubColor);
+        ctx.setFontSize(22);
+        ctx.fillText(item.label, x + statWidth / 2, statY + 98);
+      });
+
       ctx.setTextAlign("left");
-      ctx.fillText("“", 80, 380);
+      drawRoundRectPath(ctx, 48, 1050, w - 276, 142, 34);
+      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.72)");
+      ctx.fill();
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(22);
+      ctx.fillText("当前目标", 78, 1092);
+      ctx.setFillStyle(heroTextColor);
+      ctx.setFontSize(34);
+      ctx.fillText(topGoal.name || "我的攒钱目标", 78, 1140);
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(22);
+      ctx.fillText(`已完成 ${topGoal.percent || "0.0"}% · 距目标还差 ¥${topGoal.remainingDisplay || "0.00"}`, 78, 1176);
 
-      ctx.setFillStyle("#2C3E50");
-      ctx.setFontSize(38);
-      ctx.fillText("时间看得见你", 160, 360);
-      ctx.fillText("的每一分努力。", 160, 420);
-
-      ctx.setFillStyle("#7F8C8D");
-      ctx.setFontSize(26);
-      ctx.fillText("已连续打卡 (天)", 100, 540);
-
-      ctx.setFillStyle("#48C9B0");
-      ctx.setFontSize(96);
-      ctx.fillText(this.data.streakDisplay, 100, 640);
-
-      ctx.beginPath();
-      ctx.moveTo(100, 700);
-      ctx.lineTo(w - 100, 700);
-      ctx.setStrokeStyle("rgba(0, 0, 0, 0.05)");
-      ctx.setLineWidth(2);
-      ctx.stroke();
-
-      ctx.setFillStyle("#7F8C8D");
-      ctx.setFontSize(26);
-      ctx.fillText("金库总额 (元)", 100, 770);
-
-      ctx.setFillStyle("#2C3E50");
-      ctx.setFontSize(80);
-      ctx.fillText(`¥ ${this.data.totalSavedDisplay}`, 100, 860);
-
-      ctx.setFillStyle("#48C9B0");
-      ctx.setFontSize(28);
-      ctx.fillText(`距【${topGoal.name}】还差 ¥${topGoal.remainingDisplay}`, 100, 940);
-
-      // 5. 底部品牌与小程序码
-      ctx.setFillStyle("#2C3E50");
-      ctx.setFontSize(32);
-      ctx.fillText("今天也在认真变富 ✨", 60, 1140);
-      ctx.setFillStyle("#7F8C8D");
-      ctx.setFontSize(24);
-      ctx.fillText("长按扫码，开启你的攒钱之旅", 60, 1190);
-
-      const codeBoxX = w - 220;
-      const codeBoxY = 1068;
-      const codeBoxSize = 160;
+      const codeBoxX = w - 196;
+      const codeBoxY = 1050;
+      const codeBoxSize = 148;
       const codeImagePadding = 12;
 
       ctx.save();
-      ctx.setShadow(0, 12, 30, "rgba(0, 0, 0, 0.06)");
-      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 36);
+      ctx.setShadow(0, 12, 30, "rgba(0, 0, 0, 0.08)");
+      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 32);
       ctx.setFillStyle("#FFFFFF");
       ctx.fill();
       ctx.restore();
-
-      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 36);
-      ctx.setLineWidth(2);
-      ctx.setStrokeStyle("rgba(72, 201, 176, 0.15)");
-      ctx.stroke();
 
       ctx.save();
       drawRoundRectPath(
@@ -1128,7 +1979,7 @@ Page({
         codeBoxY + codeImagePadding,
         codeBoxSize - codeImagePadding * 2,
         codeBoxSize - codeImagePadding * 2,
-        28
+        24
       );
       ctx.clip();
       ctx.drawImage(
@@ -1139,6 +1990,14 @@ Page({
         codeBoxSize - codeImagePadding * 2
       );
       ctx.restore();
+
+      ctx.setTextAlign("left");
+      ctx.setFillStyle(heroTextColor);
+      ctx.setFontSize(32);
+      ctx.fillText("今天也在认真变富", 56, 1260);
+      ctx.setFillStyle(heroSubColor);
+      ctx.setFontSize(22);
+      ctx.fillText("长按扫码，开启你的攒钱挑战", 56, 1298);
 
       const posterTempFilePath = await this.exportPosterCanvas(ctx, w, h);
 

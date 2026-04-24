@@ -10,6 +10,9 @@
   <view class="nav-bar" style="padding-top: {{statusBarHeight}}px;">
     <view class="nav-title">小简攒钱</view>
     <view class="nav-buttons">
+      <view class="nav-btn" hover-class="hover-effect" bindtap="onOpenBackup">
+        <text class="nav-btn-icon">💾</text>
+      </view>
       <view class="nav-btn" hover-class="hover-effect" bindtap="onTapAchievements">
         <text class="nav-btn-icon">🏆</text>
       </view>
@@ -93,7 +96,151 @@
       </view>
     </view>
 
-    <view class="rhythm-card" wx:if="{{goals.length > 0}}">
+    <view class="challenge-card" wx:if="{{goals.length > 0}}">
+      <view class="challenge-orbit challenge-orbit-a"></view>
+      <view class="challenge-orbit challenge-orbit-b"></view>
+      <view class="challenge-header">
+        <view>
+          <view class="challenge-kicker">365 天点亮挑战</view>
+          <view class="challenge-title">{{challengeName}}</view>
+        </view>
+        <view class="challenge-today-badge {{challengeTodayDone ? 'challenge-today-done' : ''}}">
+          {{challengeTodayStateText}}
+        </view>
+      </view>
+      <view class="challenge-hero-row">
+        <view class="challenge-number-block">
+          <text class="challenge-big-number">{{challengeLitDaysDisplay}}</text>
+          <text class="challenge-number-unit">/365 格</text>
+        </view>
+        <view class="challenge-copy">
+          <text>累计点亮进度 {{challengePercentDisplay}}</text>
+          <text>这面墙越满，越有截图分享的冲动。</text>
+        </view>
+      </view>
+      <view class="challenge-progress">
+        <view class="challenge-progress-fill" style="width: {{challengePercent}}%;"></view>
+      </view>
+      <view class="challenge-wall">
+        <view
+          wx:for="{{challengeDays}}"
+          wx:key="key"
+          class="challenge-dot {{item.levelClass}} {{item.isToday ? 'challenge-dot-today' : ''}} {{item.isFuture ? 'challenge-dot-future' : ''}}"
+        ></view>
+      </view>
+      <view class="challenge-stats">
+        <view class="challenge-stat">
+          <text class="challenge-stat-num">¥{{challengeTotalAmountDisplay}}</text>
+          <text class="challenge-stat-label">挑战累计攒下</text>
+        </view>
+        <view class="challenge-stat">
+          <text class="challenge-stat-num">{{challengeElapsedDaysDisplay}} 天</text>
+          <text class="challenge-stat-label">已经走过</text>
+        </view>
+        <view class="challenge-stat">
+          <text class="challenge-stat-num">{{challengeLeftDaysDisplay}} 格</text>
+          <text class="challenge-stat-label">待点亮</text>
+        </view>
+      </view>
+      <view class="challenge-status">{{challengeStatusText}}</view>
+      <view class="challenge-actions">
+        <view class="challenge-action challenge-action-primary" hover-class="hover-effect" bindtap="onTapCheckInWithGoal" data-id="{{focusGoalId}}">
+          <text>点亮今天</text>
+        </view>
+        <view class="challenge-action challenge-action-secondary" hover-class="hover-effect" bindtap="onCopyChallengeShare">
+          <text>复制分享文案</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="review-entry-card" wx:if="{{goals.length > 0}}" hover-class="hover-effect" bindtap="onToggleReviewPanel">
+      <view class="review-entry-left">
+        <view class="review-entry-kicker">复盘中心</view>
+        <view class="review-entry-title">{{showReviewPanel ? '收起详细复盘' : '展开月历、节奏和本月小结'}}</view>
+        <view class="review-entry-desc">首页先保持轻，想复盘时再看完整数据。</view>
+      </view>
+      <view class="review-entry-right">
+        <view class="review-mini-stat">
+          <text class="review-mini-num">{{calendarActiveDaysDisplay}}</text>
+          <text class="review-mini-label">本月打卡</text>
+        </view>
+        <view class="review-toggle-icon">{{showReviewPanel ? '收起' : '展开'}}</view>
+      </view>
+    </view>
+
+    <view class="review-panel" wx:if="{{goals.length > 0 && showReviewPanel}}">
+    <view class="share-kit-card">
+      <view class="share-kit-header">
+        <view>
+          <view class="share-kit-tag">分享素材中心</view>
+          <view class="share-kit-title">把坚持变成能发出去的素材</view>
+        </view>
+      </view>
+      <view class="share-kit-grid">
+        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopyWeeklyReport">
+          <text class="share-kit-icon">📝</text>
+          <text class="share-kit-name">复制本周周报</text>
+          <text class="share-kit-desc">{{weeklySummaryRangeText}} · {{weeklySummaryDaysDisplay}} 天打卡</text>
+        </view>
+        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopyChallengeShare">
+          <text class="share-kit-icon">✨</text>
+          <text class="share-kit-name">复制挑战进度</text>
+          <text class="share-kit-desc">365 点亮 {{challengeLitDaysDisplay}} 格</text>
+        </view>
+        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopySupervisionShare">
+          <text class="share-kit-icon">👀</text>
+          <text class="share-kit-name">邀请朋友监督</text>
+          <text class="share-kit-desc">一句话让朋友提醒你别断</text>
+        </view>
+      </view>
+      <view class="poster-theme-box">
+        <view class="poster-theme-head">
+          <text>海报模板</text>
+          <view class="poster-theme-generate" hover-class="hover-effect" bindtap="onGeneratePoster">生成当前模板</view>
+        </view>
+        <view class="poster-theme-list">
+          <view
+            wx:for="{{posterThemes}}"
+            wx:key="key"
+            class="poster-theme-chip {{posterThemeKey === item.key ? 'poster-theme-chip-active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectPosterTheme"
+          >
+            <text class="poster-theme-name">{{item.name}}</text>
+            <text class="poster-theme-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="weekly-report-card">
+        <view class="weekly-report-top">
+          <view>
+            <view class="weekly-report-kicker">本周复盘</view>
+            <view class="weekly-report-title">{{weeklySummaryRangeText}}</view>
+          </view>
+          <view class="weekly-report-mood">{{weeklySummaryMoodText}}</view>
+        </view>
+        <view class="weekly-report-stats">
+          <view>
+            <text class="weekly-report-num">{{weeklySummaryDaysDisplay}}</text>
+            <text class="weekly-report-label">打卡天数</text>
+          </view>
+          <view>
+            <text class="weekly-report-num">¥{{weeklySummaryAmountDisplay}}</text>
+            <text class="weekly-report-label">本周攒下</text>
+          </view>
+          <view>
+            <text class="weekly-report-num">¥{{weeklySummaryAverageDisplay}}</text>
+            <text class="weekly-report-label">日均攒下</text>
+          </view>
+        </view>
+        <view class="weekly-report-focus">
+          本周最投入：{{weeklySummaryTopGoalName}} · ¥{{weeklySummaryTopGoalAmountDisplay}}
+        </view>
+        <view class="weekly-report-insight">{{weeklySummaryInsight}}</view>
+      </view>
+    </view>
+
+    <view class="rhythm-card">
       <view class="rhythm-header">
         <view>
           <view class="rhythm-tag">最近 28 天</view>
@@ -118,6 +265,100 @@
         <text>最近 28 天已攒 ¥{{rhythmRecentAddedDisplay}}</text>
       </view>
       <view class="rhythm-status">{{rhythmStatusText}}</view>
+    </view>
+
+    <view class="calendar-card">
+      <view class="calendar-header">
+        <view>
+          <view class="calendar-tag">本月打卡视图</view>
+          <view class="calendar-title">{{calendarMonthTitle}}</view>
+        </view>
+        <view class="calendar-summary">
+          <text class="calendar-summary-num">{{calendarActiveDaysDisplay}} 天</text>
+          <text class="calendar-summary-label">本月已打卡</text>
+        </view>
+      </view>
+      <view class="calendar-weekdays">
+        <text wx:for="{{calendarWeekdays}}" wx:key="*this" class="calendar-weekday">{{item}}</text>
+      </view>
+      <view class="calendar-grid">
+        <view
+          wx:for="{{calendarDays}}"
+          wx:key="key"
+          class="calendar-cell {{item.levelClass}} {{item.isToday ? 'calendar-cell-today' : ''}}"
+        >
+          <text class="calendar-cell-label">{{item.dayLabel}}</text>
+        </view>
+      </view>
+      <view class="calendar-legend">
+        <text>本月已攒 ¥{{calendarMonthlyAddedDisplay}}</text>
+        <text>最长连续 {{calendarLongestStreakDisplay}} 天</text>
+      </view>
+      <view class="calendar-status">{{calendarStatusText}}</view>
+    </view>
+
+    <view class="summary-card">
+      <view class="summary-header">
+        <view>
+          <view class="summary-tag">本月小结</view>
+          <view class="summary-title">这段时间你已经在变稳了</view>
+        </view>
+        <view class="summary-copy-btn" hover-class="hover-effect" bindtap="onCopyMonthlySummary">
+          <text>复制小结</text>
+        </view>
+      </view>
+      <view class="summary-grid">
+        <view class="summary-metric">
+          <text class="summary-num">{{monthlySummaryDaysDisplay}}</text>
+          <text class="summary-label">本月打卡天数</text>
+        </view>
+        <view class="summary-metric">
+          <text class="summary-num">¥{{monthlySummaryAmountDisplay}}</text>
+          <text class="summary-label">本月累计攒下</text>
+        </view>
+        <view class="summary-metric">
+          <text class="summary-num">¥{{monthlySummaryAverageDisplay}}</text>
+          <text class="summary-label">单次平均存入</text>
+        </view>
+        <view class="summary-metric">
+          <text class="summary-num">{{monthlySummaryUnlockedDisplay}}</text>
+          <text class="summary-label">已解锁成就</text>
+        </view>
+      </view>
+      <view class="summary-highlight">
+        <text class="summary-highlight-title">这个月最投入的目标</text>
+        <text class="summary-highlight-goal">{{monthlySummaryTopGoalName}}</text>
+        <text class="summary-highlight-amount">已存入 ¥{{monthlySummaryTopGoalAmountDisplay}}</text>
+      </view>
+      <view class="summary-insight">{{monthlySummaryInsight}}</view>
+    </view>
+    </view>
+
+    <!-- 真实攒钱剧本 -->
+    <view class="script-section" wx:if="{{goals.length === 0}}">
+      <view class="script-section-header">
+        <view>
+          <view class="script-kicker">先选一个剧本开局</view>
+          <view class="script-title">不用想目标，直接开始一个真实挑战</view>
+        </view>
+      </view>
+      <scroll-view scroll-x class="script-scroll" show-scrollbar="false">
+        <view
+          wx:for="{{challengeScripts}}"
+          wx:key="name"
+          class="script-card"
+          data-index="{{index}}"
+          bindtap="onUseChallengeScript"
+        >
+          <view class="script-icon">{{item.icon}}</view>
+          <view class="script-name">{{item.name}}</view>
+          <view class="script-subtitle">{{item.subtitle}}</view>
+          <view class="script-meta">
+            <text>¥{{item.target}}</text>
+            <text>{{item.days}}天</text>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 热门目标一键添加 -->
@@ -181,6 +422,13 @@
           <view class="goal-insight-row">
             <view class="goal-insight goal-insight-strong">{{item.actionText}}</view>
             <view class="goal-insight">{{item.milestoneText}}</view>
+          </view>
+          <view class="goal-script-tip" wx:if="{{item.scriptTip}}">
+            <view class="goal-script-tip-text">{{item.scriptTip}}</view>
+            <view class="goal-script-status">{{item.scriptStatusText}}</view>
+            <view class="goal-script-share" hover-class="hover-effect" data-id="{{item.id}}" bindtap="onCopyGoalScriptShare">
+              {{item.completed ? '复制达成文案' : '复制剧本进度'}}
+            </view>
           </view>
           <view class="goal-actions">
             <view class="action-btn action-btn-checkin" data-id="{{item.id}}" bindtap="onTapCheckInWithGoal">
@@ -260,6 +508,43 @@
       <view class="checkin-plan-btn" hover-class="hover-effect" bindtap="onUseSuggestedAmount">
         <text>填入 ¥{{selectedGoalSuggestedAmountDisplay}}</text>
       </view>
+    </view>
+
+    <view class="checkin-note-card">
+      <view class="checkin-note-header">
+        <text class="checkin-note-title">给这笔钱留一句话</text>
+        <text class="checkin-note-desc">选填，但很适合以后回来翻</text>
+      </view>
+      <view class="mood-tag-list">
+        <view
+          wx:for="{{moodTags}}"
+          wx:key="key"
+          class="mood-tag {{selectedMoodKey === item.key ? 'mood-tag-active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectMoodTag"
+        >
+          <text>{{item.emoji}}</text>
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+      <view class="note-template-list">
+        <view
+          wx:for="{{noteTemplates}}"
+          wx:key="*this"
+          class="note-template-chip"
+          data-note="{{item}}"
+          bindtap="onUseNoteTemplate"
+        >
+          <text>{{item}}</text>
+        </view>
+      </view>
+      <input
+        class="note-input"
+        maxlength="30"
+        placeholder="比如：今天少点一杯奶茶，先为旅行基金存起来"
+        value="{{inputNote}}"
+        bindinput="onInputNote"
+      />
     </view>
 
     <!-- 快捷金额按钮 -->
@@ -367,7 +652,8 @@
     </view>
 
     <view class="create-helper-text">
-      建议先定一个能坚持 30 天以上的小目标，开始比完美更重要。
+      <text wx:if="{{createGoalScriptTip}}">{{createGoalScriptTip}}</text>
+      <text wx:else>建议先定一个能坚持 30 天以上的小目标，开始比完美更重要。</text>
     </view>
 
     <view class="popup-actions">
@@ -469,11 +755,50 @@
       <view wx:for="{{currentGoalHistory}}" wx:key="index" class="history-item">
         <view class="history-info">
           <text class="history-date">{{item.date}}</text>
+          <text class="history-mood" wx:if="{{item.moodLabel}}">{{item.moodEmoji}} {{item.moodLabel}}</text>
+          <text class="history-note" wx:if="{{item.note}}">{{item.note}}</text>
         </view>
         <text class="history-amount">+ ¥{{item.amount}}</text>
       </view>
       <view class="empty-history" wx:if="{{currentGoalHistory.length === 0}}">
         <text>暂无记录</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 备份弹窗 -->
+  <view class="popup-mask {{showBackupPopup ? 'popup-mask-show' : ''}}" bindtap="onCloseBackup"></view>
+
+  <view class="popup-content popup-content-backup {{showBackupPopup ? 'popup-content-show' : ''}}">
+    <view class="popup-header">
+      <text class="popup-title">本地备份与恢复</text>
+      <view class="popup-close" bindtap="onCloseBackup">✕</view>
+    </view>
+
+    <view class="backup-body">
+      <view class="backup-tip">
+        数据仍然只保存在本地。这里提供一个可复制的备份内容，适合换手机或清缓存前保存。
+      </view>
+
+      <view class="backup-block">
+        <text class="backup-label">备份内容</text>
+        <textarea class="backup-textarea" value="{{backupPayload}}" disabled />
+        <view class="backup-primary-btn" hover-class="hover-effect" bindtap="onCopyBackup">
+          <text>复制备份内容</text>
+        </view>
+      </view>
+
+      <view class="backup-block">
+        <text class="backup-label">恢复内容</text>
+        <textarea
+          class="backup-textarea"
+          placeholder="把之前复制的备份内容粘贴到这里"
+          value="{{backupInput}}"
+          bindinput="onInputBackupRestore"
+        />
+        <view class="backup-secondary-btn" hover-class="hover-effect" bindtap="onRestoreBackup">
+          <text>恢复到当前小程序</text>
+        </view>
       </view>
     </view>
   </view>
