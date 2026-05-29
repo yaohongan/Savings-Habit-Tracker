@@ -155,7 +155,6 @@
 ```
 小简攒钱打卡/
 ├── miniprogram/              # 小程序前端
-│   ├── components/           # 组件
 │   ├── images/               # 图片资源
 │   ├── pages/
 │   │   └── index/           # 首页（单页面应用）
@@ -166,7 +165,6 @@
 │   ├── app.js               # 入口文件
 │   ├── app.json             # 全局配置
 │   └── app.wxss             # 全局样式
-├── cloudfunctions/          # 云函数
 ├── README.md                # 项目说明
 └── project.config.json      # 项目配置
 ```
@@ -176,7 +174,8 @@
 1. 使用微信开发者工具打开项目
 2. 填写你的小程序 AppID
 3. 不需要云开发也可以完整运行（因为数据都存在本地）
-4. 提交审核即可
+4. 如需启用“明天提醒我”，先在微信公众平台申请订阅消息模板，并把模板 ID 填入 `miniprogram/pages/index/index.js` 顶部的 `REMINDER_TEMPLATE_ID`
+5. 提交审核即可
 
 ## 💡 产品定位
 

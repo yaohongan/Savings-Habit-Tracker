@@ -91,8 +91,13 @@
       </view>
       <view class="daily-focus-tip">{{focusGoalHint}}</view>
       <view class="daily-focus-milestone">{{focusGoalMilestoneText}}</view>
-      <view class="daily-focus-action" hover-class="hover-effect" bindtap="onTapCheckInWithGoal" data-id="{{focusGoalId}}">
-        <text>去完成今天这笔</text>
+      <view class="daily-focus-actions">
+        <view class="daily-focus-action" hover-class="hover-effect" bindtap="onTapCheckInWithGoal" data-id="{{focusGoalId}}">
+          <text>去完成今天这笔</text>
+        </view>
+        <view class="daily-focus-action daily-focus-action-secondary" hover-class="hover-effect" bindtap="onRequestSavingReminder">
+          <text>{{reminderStatusText}}</text>
+        </view>
       </view>
     </view>
 

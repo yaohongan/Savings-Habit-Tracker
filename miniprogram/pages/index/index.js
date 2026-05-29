@@ -107,6 +107,7 @@ const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000];
 const POSTER_WIDTH = 750;
 const POSTER_HEIGHT = 1334;
 const POSTER_MINI_CODE_SRC = "../../images/share-mini-code.jpg";
+const REMINDER_TEMPLATE_ID = "";
 
 function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -625,6 +626,7 @@ function getBaseLocalData() {
     history: [],
     streak: 0,
     lastCheckInDate: "",
+    reminderRequestedAt: "",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -660,6 +662,7 @@ Page({
     showAchievementsPopup: false,
     showBackupPopup: false,
     showReviewPanel: false,
+    pendingCheckInGoalId: 0,
     inputAmount: "0",
     inputNote: "",
     selectedMoodKey: "steady",
@@ -763,6 +766,7 @@ Page({
     posterHeight: 1334,
     isGeneratingPoster: false,
     posterThemeKey: "challenge",
+    reminderStatusText: "开启提醒，明天继续点亮一格",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -783,7 +787,8 @@ Page({
     ],
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    this.launchOptions = options;
     const systemInfo = wx.getSystemInfoSync();
     this.setData({
       statusBarHeight: systemInfo.statusBarHeight,
@@ -1061,6 +1066,9 @@ Page({
           ? `今天已为这个目标存入 ¥${selectedGoal.todayAddedDisplay}`
           : `建议先存 ¥${selectedGoal.suggestedAmountDisplay}`)
         : "",
+      reminderStatusText: this.localData.reminderRequestedAt
+        ? "已尝试开启提醒，明天记得回来点亮"
+        : "开启提醒，明天继续点亮一格",
       achievements: this.localData.achievements,
     });
   },
@@ -1069,15 +1077,58 @@ Page({
     wx.setStorageSync(STORAGE_KEY, this.localData);
   },
 
-  onTapCheckIn() {
-    const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+  buildShareTitle() {
+    const focusName = this.data.focusGoalName || "我的攒钱目标";
+    const litDays = this.data.challengeLitDaysDisplay || "0";
+    if ((this.data.goals || []).length > 0) {
+      return `我正在点亮「${focusName}」，已坚持 ${litDays} 天`;
+    }
+    return "和我一起开始小简攒钱打卡";
+  },
+
+  buildSharePath() {
+    const focusGoalId = this.data.focusGoalId || "";
+    const query = focusGoalId ? `?from=share&goalId=${focusGoalId}` : "?from=share";
+    return `/pages/index/index${query}`;
+  },
+
+  onShareAppMessage() {
+    return {
+      title: this.buildShareTitle(),
+      path: this.buildSharePath(),
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: this.buildShareTitle(),
+      query: this.buildSharePath().split("?")[1] || "from=timeline",
+    };
+  },
+
+  openCheckInForGoal(goalId, useSuggestedAmount = false) {
+    const id = Number(goalId);
+    const goals = this.localData.goals || [];
+    const activeGoal = goals.find((item) => item.id === id)
+      || goals.find((item) => !item.completed)
+      || goals[0];
+    const suggestedAmount = activeGoal && useSuggestedAmount
+      ? calcSuggestedAmount(activeGoal)
+      : 0;
+
     this.setData({
       showCheckInPopup: true,
-      inputAmount: "0",
+      showCreateGoalPopup: false,
+      inputAmount: suggestedAmount > 0 ? String(suggestedAmount) : "0",
       inputNote: "",
       selectedMoodKey: "steady",
       selectedGoalId: activeGoal ? activeGoal.id : this.data.selectedGoalId,
     });
+  },
+
+  onTapCheckIn() {
+    const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+    this.openCheckInForGoal(activeGoal ? activeGoal.id : this.data.selectedGoalId);
   },
 
   onBottomPrimaryAction() {
@@ -1295,6 +1346,7 @@ Page({
 
     this.setData({
       showCreateGoalPopup: false,
+      pendingCheckInGoalId: newGoal.id,
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
@@ -1303,9 +1355,10 @@ Page({
     });
 
     wx.showToast({
-      title: "创建成功",
+      title: "目标已创建，先存第一笔",
       icon: "success",
     });
+    this.openCheckInForGoal(newGoal.id, true);
   },
 
   onTapAchievements() {
@@ -1534,13 +1587,7 @@ Page({
 
   onTapCheckInWithGoal(e) {
     const id = Number(e.currentTarget.dataset.id);
-    this.setData({
-      showCheckInPopup: true,
-      inputAmount: "0",
-      inputNote: "",
-      selectedMoodKey: "steady",
-      selectedGoalId: id,
-    });
+    this.openCheckInForGoal(id);
   },
 
   onUseSuggestedAmount() {
@@ -1649,6 +1696,63 @@ Page({
     wx.showToast({
       title: "打卡成功",
       icon: "success",
+    });
+    this.promptSavingReminderAfterCheckIn();
+  },
+
+  promptSavingReminderAfterCheckIn() {
+    if (!REMINDER_TEMPLATE_ID || this.localData.reminderRequestedAt === toDateKey()) {
+      return;
+    }
+    wx.showModal({
+      title: "明天提醒你继续点亮吗？",
+      content: "开启后，小简会用微信订阅消息提醒你回来打卡。",
+      confirmText: "开启提醒",
+      cancelText: "暂时不用",
+      success: (res) => {
+        if (res.confirm) {
+          this.onRequestSavingReminder();
+        }
+      },
+    });
+  },
+
+  onRequestSavingReminder() {
+    if (!REMINDER_TEMPLATE_ID) {
+      wx.showModal({
+        title: "提醒模板待配置",
+        content: "在微信公众平台配置订阅消息模板 ID 后，填入 REMINDER_TEMPLATE_ID 即可唤起每日打卡提醒。",
+        confirmText: "知道了",
+        showCancel: false,
+      });
+      return;
+    }
+
+    if (!wx.requestSubscribeMessage) {
+      wx.showToast({
+        title: "当前微信版本暂不支持订阅提醒",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.requestSubscribeMessage({
+      tmplIds: [REMINDER_TEMPLATE_ID],
+      success: () => {
+        this.localData.reminderRequestedAt = toDateKey();
+        this.saveLocalData();
+        this.refreshDashboard();
+        wx.showToast({
+          title: "提醒已开启",
+          icon: "success",
+        });
+      },
+      fail: () => {
+        wx.showToast({
+          title: "提醒开启失败，可稍后再试",
+          icon: "none",
+        });
+      },
     });
   },
 
