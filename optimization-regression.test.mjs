@@ -42,6 +42,18 @@ test("new goal creation can continue directly into first check-in", () => {
   assert.match(indexJs, /showCheckInPopup:\s*true/);
 });
 
+test("retention prompts stay honest and low friction", () => {
+  const indexJs = read("./miniprogram/pages/index/index.js");
+  const indexWxml = read("./miniprogram/pages/index/index.wxml");
+
+  assert.match(indexJs, /const hasReminderTemplate = Boolean\(REMINDER_TEMPLATE_ID\)/);
+  assert.match(indexJs, /reminderStatusText: hasReminderTemplate/);
+  assert.match(indexJs, /buildCheckInRecoveryText\(/);
+  assert.match(indexJs, /recoveryPromptText/);
+  assert.match(indexWxml, /daily-focus-recovery/);
+  assert.match(indexJs, /openCheckInForGoal\(activeGoal \? activeGoal\.id : this\.data\.selectedGoalId,\s*true\)/);
+});
+
 test("README describes the local-only production shape", () => {
   const readme = read("./README.md");
 

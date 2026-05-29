@@ -318,6 +318,16 @@
   margin-bottom: 14rpx;
 }
 
+.daily-focus-recovery {
+  margin-bottom: 14rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(240, 138, 93, 0.12);
+  color: #8A4A2F;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 .daily-focus-milestone {
   font-size: 24rpx;
   color: var(--accent);

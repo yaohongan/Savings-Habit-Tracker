@@ -164,6 +164,16 @@ function calcDayDiff(from, to) {
   return Math.floor((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
 }
 
+function buildCheckInRecoveryText(lastCheckInDate, todayKey = toDateKey()) {
+  if (!lastCheckInDate) return "";
+  const dayDiff = calcDayDiff(lastCheckInDate, todayKey);
+  if (dayDiff <= 1) return "";
+  if (dayDiff === 2) {
+    return "昨天断了一下没关系，今天补一笔就把节奏接回来。";
+  }
+  return `已经 ${dayDiff} 天没记录了，今天先存一小笔，当作重新开始。`;
+}
+
 function calcRemainingDays(deadline) {
   if (!deadline) return null;
   const today = new Date();
@@ -767,6 +777,7 @@ Page({
     isGeneratingPoster: false,
     posterThemeKey: "challenge",
     reminderStatusText: "开启提醒，明天继续点亮一格",
+    recoveryPromptText: "",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -965,6 +976,8 @@ Page({
       ? this.data.selectedGoalId
       : (focusGoal ? focusGoal.id : 0);
     const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
+    const hasReminderTemplate = Boolean(REMINDER_TEMPLATE_ID);
+    const recoveryPromptText = buildCheckInRecoveryText(this.localData.lastCheckInDate, todayKey);
     const supervisionShareText = focusGoal
       ? [
         `我正在小简攒钱打卡坚持「${focusGoal.name}」。`,
@@ -1066,9 +1079,12 @@ Page({
           ? `今天已为这个目标存入 ¥${selectedGoal.todayAddedDisplay}`
           : `建议先存 ¥${selectedGoal.suggestedAmountDisplay}`)
         : "",
-      reminderStatusText: this.localData.reminderRequestedAt
-        ? "已尝试开启提醒，明天记得回来点亮"
-        : "开启提醒，明天继续点亮一格",
+      reminderStatusText: hasReminderTemplate
+        ? (this.localData.reminderRequestedAt
+          ? "已尝试开启提醒，明天记得回来点亮"
+          : "开启提醒，明天继续点亮一格")
+        : "配置提醒模板后可开启",
+      recoveryPromptText,
       achievements: this.localData.achievements,
     });
   },
@@ -1133,7 +1149,8 @@ Page({
 
   onBottomPrimaryAction() {
     if ((this.data.goals || []).length > 0) {
-      this.onTapCheckIn();
+      const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+      this.openCheckInForGoal(activeGoal ? activeGoal.id : this.data.selectedGoalId, true);
       return;
     }
     this.onTapCreateGoal();
