@@ -1,4 +1,11 @@
 const STORAGE_KEY = "xj_saving_data_v1";
+const {
+  buildBackupPayload,
+  buildBackupSummary,
+  parseBackupPayload,
+  buildTomorrowActionText,
+  buildShareRecallLine,
+} = require("../../utils/retention");
 
 const HOT_GOAL_TEMPLATES = [
   { name: "旅行基金", icon: "✈️", color: "#EBF5FB", accentColor: "#5DADE2" },
@@ -107,6 +114,7 @@ const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000];
 const POSTER_WIDTH = 750;
 const POSTER_HEIGHT = 1334;
 const POSTER_MINI_CODE_SRC = "../../images/share-mini-code.jpg";
+const REMINDER_TEMPLATE_ID = "";
 
 function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -161,6 +169,20 @@ function calcDayDiff(from, to) {
   const fromUtc = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
   const toUtc = Date.UTC(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
   return Math.floor((toUtc - fromUtc) / (1000 * 60 * 60 * 24));
+}
+
+function buildCheckInRecoveryText(lastCheckInDate, todayKey = toDateKey()) {
+  if (!lastCheckInDate) return "";
+  const dayDiff = calcDayDiff(lastCheckInDate, todayKey);
+  if (dayDiff <= 1) return "";
+  if (dayDiff === 2) {
+    return "昨天断了一下没关系，今天补一笔就把节奏接回来。";
+  }
+  return `已经 ${dayDiff} 天没记录了，今天先存一小笔，当作重新开始。`;
+}
+
+function isReminderAccepted(subscribeResult) {
+  return subscribeResult && subscribeResult[REMINDER_TEMPLATE_ID] === "accept";
 }
 
 function calcRemainingDays(deadline) {
@@ -578,6 +600,7 @@ function buildChallengeBoard(goals = [], history = [], date = new Date()) {
   const shareText = [
     `我正在小简攒钱打卡完成「${challengeName}」。`,
     `365 天挑战已经点亮 ${litDays} 格，累计攒下 ¥${formatAmount(totalAmount)}。`,
+    buildShareRecallLine(challengeName, primaryGoal ? formatAmount(calcSuggestedAmount(primaryGoal)) : "0.00"),
     `从 ${startText} 开始，把想要的生活一格一格存出来。`,
   ].join("\n");
 
@@ -625,6 +648,7 @@ function getBaseLocalData() {
     history: [],
     streak: 0,
     lastCheckInDate: "",
+    reminderRequestedAt: "",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -660,6 +684,7 @@ Page({
     showAchievementsPopup: false,
     showBackupPopup: false,
     showReviewPanel: false,
+    pendingCheckInGoalId: 0,
     inputAmount: "0",
     inputNote: "",
     selectedMoodKey: "steady",
@@ -744,7 +769,10 @@ Page({
     challengeShareText: "",
     challengeName: "",
     backupPayload: "",
+    backupSummaryText: "",
     backupInput: "",
+    restorePreviewText: "",
+    restoreErrorText: "",
     focusGoalName: "",
     focusGoalId: 0,
     focusGoalPercentDisplay: "0.0%",
@@ -763,6 +791,9 @@ Page({
     posterHeight: 1334,
     isGeneratingPoster: false,
     posterThemeKey: "challenge",
+    nextActionText: "",
+    reminderStatusText: "开启提醒，明天继续点亮一格",
+    recoveryPromptText: "",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -783,7 +814,8 @@ Page({
     ],
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    this.launchOptions = options;
     const systemInfo = wx.getSystemInfoSync();
     this.setData({
       statusBarHeight: systemInfo.statusBarHeight,
@@ -960,11 +992,24 @@ Page({
       ? this.data.selectedGoalId
       : (focusGoal ? focusGoal.id : 0);
     const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
+    const hasReminderTemplate = Boolean(REMINDER_TEMPLATE_ID);
+    const recoveryPromptText = buildCheckInRecoveryText(this.localData.lastCheckInDate, todayKey);
+    const nextActionText = focusGoal
+      ? buildTomorrowActionText(
+        focusGoal.name,
+        focusGoal.suggestedAmountDisplay,
+        Number(focusGoal.todayAdded || 0) > 0
+      )
+      : "";
+    const shareRecallLine = focusGoal
+      ? buildShareRecallLine(focusGoal.name, focusGoal.suggestedAmountDisplay)
+      : "";
     const supervisionShareText = focusGoal
       ? [
         `我正在小简攒钱打卡坚持「${focusGoal.name}」。`,
         `现在进度 ${focusGoal.percent}%，365 点亮挑战已点亮 ${challengeBoard.litDays} 格。`,
-        `你可以隔几天问我一句：今天点亮了吗？`,
+        shareRecallLine,
+        `明天你可以提醒我一句：今天点亮了吗？`,
       ].join("\n")
       : "";
 
@@ -1061,6 +1106,13 @@ Page({
           ? `今天已为这个目标存入 ¥${selectedGoal.todayAddedDisplay}`
           : `建议先存 ¥${selectedGoal.suggestedAmountDisplay}`)
         : "",
+      reminderStatusText: hasReminderTemplate
+        ? (this.localData.reminderRequestedAt
+          ? "已尝试开启提醒，明天记得回来点亮"
+          : "开启提醒，明天继续点亮一格")
+        : "配置提醒模板后可开启",
+      nextActionText,
+      recoveryPromptText,
       achievements: this.localData.achievements,
     });
   },
@@ -1069,20 +1121,63 @@ Page({
     wx.setStorageSync(STORAGE_KEY, this.localData);
   },
 
-  onTapCheckIn() {
-    const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+  buildShareTitle() {
+    const focusName = this.data.focusGoalName || "我的攒钱目标";
+    if ((this.data.goals || []).length > 0) {
+      return `我正在点亮「${focusName}」，明天继续点亮`;
+    }
+    return "和我一起开始小简攒钱打卡";
+  },
+
+  buildSharePath() {
+    const focusGoalId = this.data.focusGoalId || "";
+    const query = focusGoalId ? `?from=share&goalId=${focusGoalId}` : "?from=share";
+    return `/pages/index/index${query}`;
+  },
+
+  onShareAppMessage() {
+    return {
+      title: this.buildShareTitle(),
+      path: this.buildSharePath(),
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: this.buildShareTitle(),
+      query: this.buildSharePath().split("?")[1] || "from=timeline",
+    };
+  },
+
+  openCheckInForGoal(goalId, useSuggestedAmount = false) {
+    const id = Number(goalId);
+    const goals = this.localData.goals || [];
+    const activeGoal = goals.find((item) => item.id === id)
+      || goals.find((item) => !item.completed)
+      || goals[0];
+    const suggestedAmount = activeGoal && useSuggestedAmount
+      ? calcSuggestedAmount(activeGoal)
+      : 0;
+
     this.setData({
       showCheckInPopup: true,
-      inputAmount: "0",
+      showCreateGoalPopup: false,
+      inputAmount: suggestedAmount > 0 ? String(suggestedAmount) : "0",
       inputNote: "",
       selectedMoodKey: "steady",
       selectedGoalId: activeGoal ? activeGoal.id : this.data.selectedGoalId,
     });
   },
 
+  onTapCheckIn() {
+    const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+    this.openCheckInForGoal(activeGoal ? activeGoal.id : this.data.selectedGoalId);
+  },
+
   onBottomPrimaryAction() {
     if ((this.data.goals || []).length > 0) {
-      this.onTapCheckIn();
+      const activeGoal = (this.data.goals || []).find((item) => !item.completed) || this.data.goals[0];
+      this.openCheckInForGoal(activeGoal ? activeGoal.id : this.data.selectedGoalId, true);
       return;
     }
     this.onTapCreateGoal();
@@ -1295,6 +1390,7 @@ Page({
 
     this.setData({
       showCreateGoalPopup: false,
+      pendingCheckInGoalId: newGoal.id,
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
@@ -1303,9 +1399,10 @@ Page({
     });
 
     wx.showToast({
-      title: "创建成功",
+      title: "目标已创建，先存第一笔",
       icon: "success",
     });
+    this.openCheckInForGoal(newGoal.id, true);
   },
 
   onTapAchievements() {
@@ -1321,16 +1418,14 @@ Page({
   },
 
   onOpenBackup() {
-    const payload = JSON.stringify({
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      app: "小简攒钱打卡",
-      data: this.localData,
-    });
+    const payload = buildBackupPayload(this.localData);
     this.setData({
       showBackupPopup: true,
       backupPayload: payload,
+      backupSummaryText: buildBackupSummary(this.localData),
       backupInput: "",
+      restorePreviewText: "",
+      restoreErrorText: "",
     });
   },
 
@@ -1338,12 +1433,18 @@ Page({
     this.setData({
       showBackupPopup: false,
       backupInput: "",
+      restorePreviewText: "",
+      restoreErrorText: "",
     });
   },
 
   onInputBackupRestore(e) {
+    const input = e.detail.value;
+    const parsed = parseBackupPayload(input);
     this.setData({
-      backupInput: e.detail.value,
+      backupInput: input,
+      restorePreviewText: parsed.ok ? `将恢复：${parsed.summary}` : "",
+      restoreErrorText: input.trim() && !parsed.ok ? parsed.error : "",
     });
   },
 
@@ -1360,48 +1461,34 @@ Page({
   },
 
   onRestoreBackup() {
-    const input = (this.data.backupInput || "").trim();
-    if (!input) {
-      wx.showToast({
-        title: "请先粘贴备份内容",
-        icon: "none",
+    const parsed = parseBackupPayload(this.data.backupInput);
+    if (!parsed.ok) {
+      this.setData({
+        restorePreviewText: "",
+        restoreErrorText: parsed.error,
       });
-      return;
-    }
-
-    let parsed = null;
-    try {
-      parsed = JSON.parse(input);
-    } catch (err) {
-      wx.showToast({
-        title: "备份内容格式不对",
-        icon: "none",
-      });
-      return;
-    }
-
-    const restored = parsed && parsed.data && typeof parsed.data === "object"
-      ? parsed.data
-      : (parsed && Array.isArray(parsed.goals) && Array.isArray(parsed.history) ? parsed : null);
-    if (!restored) {
-      wx.showToast({
-        title: "没有识别到可恢复数据",
-        icon: "none",
+      wx.showModal({
+        title: "恢复失败",
+        content: parsed.error,
+        confirmText: "知道了",
+        showCancel: false,
       });
       return;
     }
 
     wx.showModal({
       title: "确认恢复",
-      content: "恢复会覆盖当前本地数据，请确认已经备份。",
+      content: `${parsed.summary}\n恢复会覆盖当前本地数据，请确认已经备份。`,
       success: (res) => {
         if (!res.confirm) return;
-        this.localData = normalizeLocalData(restored);
+        this.localData = normalizeLocalData(parsed.data);
         this.saveLocalData();
         this.refreshDashboard();
         this.setData({
           showBackupPopup: false,
           backupInput: "",
+          restorePreviewText: "",
+          restoreErrorText: "",
         });
         wx.showToast({
           title: "恢复成功",
@@ -1534,13 +1621,7 @@ Page({
 
   onTapCheckInWithGoal(e) {
     const id = Number(e.currentTarget.dataset.id);
-    this.setData({
-      showCheckInPopup: true,
-      inputAmount: "0",
-      inputNote: "",
-      selectedMoodKey: "steady",
-      selectedGoalId: id,
-    });
+    this.openCheckInForGoal(id);
   },
 
   onUseSuggestedAmount() {
@@ -1635,6 +1716,10 @@ Page({
       }
     }
     this.localData.lastCheckInDate = today;
+    const nextSuggestedAmount = calcSuggestedAmount(this.localData.goals[goalIndex]);
+    const checkInToastTitle = nextSuggestedAmount > 0
+      ? `明天先存 ¥${formatAmount(nextSuggestedAmount)}`
+      : "目标已点亮，明天继续";
 
     this.saveLocalData();
     this.refreshDashboard();
@@ -1647,8 +1732,72 @@ Page({
     });
 
     wx.showToast({
-      title: "打卡成功",
+      title: checkInToastTitle,
       icon: "success",
+    });
+    this.promptSavingReminderAfterCheckIn();
+  },
+
+  promptSavingReminderAfterCheckIn() {
+    if (!REMINDER_TEMPLATE_ID || this.localData.reminderRequestedAt === toDateKey()) {
+      return;
+    }
+    wx.showModal({
+      title: "明天提醒你继续点亮吗？",
+      content: "开启后，小简会用微信订阅消息提醒你回来打卡。",
+      confirmText: "开启提醒",
+      cancelText: "暂时不用",
+      success: (res) => {
+        if (res.confirm) {
+          this.onRequestSavingReminder();
+        }
+      },
+    });
+  },
+
+  onRequestSavingReminder() {
+    if (!REMINDER_TEMPLATE_ID) {
+      wx.showModal({
+        title: "提醒模板待配置",
+        content: "在微信公众平台配置订阅消息模板 ID 后，填入 REMINDER_TEMPLATE_ID 即可唤起每日打卡提醒。",
+        confirmText: "知道了",
+        showCancel: false,
+      });
+      return;
+    }
+
+    if (!wx.requestSubscribeMessage) {
+      wx.showToast({
+        title: "当前微信版本暂不支持订阅提醒",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.requestSubscribeMessage({
+      tmplIds: [REMINDER_TEMPLATE_ID],
+      success: (res) => {
+        if (!isReminderAccepted(res)) {
+          wx.showToast({
+            title: "提醒未开启",
+            icon: "none",
+          });
+          return;
+        }
+        this.localData.reminderRequestedAt = toDateKey();
+        this.saveLocalData();
+        this.refreshDashboard();
+        wx.showToast({
+          title: "提醒已开启",
+          icon: "success",
+        });
+      },
+      fail: () => {
+        wx.showToast({
+          title: "提醒开启失败，可稍后再试",
+          icon: "none",
+        });
+      },
     });
   },
 
@@ -1959,6 +2108,7 @@ Page({
       ctx.setFillStyle(heroSubColor);
       ctx.setFontSize(22);
       ctx.fillText(`已完成 ${topGoal.percent || "0.0"}% · 距目标还差 ¥${topGoal.remainingDisplay || "0.00"}`, 78, 1176);
+      ctx.fillText(`明天建议 ¥${this.data.focusGoalSuggestedAmountDisplay || "0.00"}，继续点亮一格`, 78, 1212);
 
       const codeBoxX = w - 196;
       const codeBoxY = 1050;
