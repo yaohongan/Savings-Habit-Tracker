@@ -187,6 +187,8 @@ node --check miniprogram/pages/index/index.js
 node --check miniprogram/app.js
 ```
 
+提交审核或合并前，建议再按 [WECHAT_QA_CHECKLIST.md](WECHAT_QA_CHECKLIST.md) 在微信开发者工具里跑一遍实机/模拟器验收。
+
 ## 💡 产品定位
 
 - **目标用户**：18-35 岁年轻用户（学生、职场新人、宝妈）
