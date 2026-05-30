@@ -174,6 +174,10 @@ function buildCheckInRecoveryText(lastCheckInDate, todayKey = toDateKey()) {
   return `已经 ${dayDiff} 天没记录了，今天先存一小笔，当作重新开始。`;
 }
 
+function isReminderAccepted(subscribeResult) {
+  return subscribeResult && subscribeResult[REMINDER_TEMPLATE_ID] === "accept";
+}
+
 function calcRemainingDays(deadline) {
   if (!deadline) return null;
   const today = new Date();
@@ -1755,7 +1759,14 @@ Page({
 
     wx.requestSubscribeMessage({
       tmplIds: [REMINDER_TEMPLATE_ID],
-      success: () => {
+      success: (res) => {
+        if (!isReminderAccepted(res)) {
+          wx.showToast({
+            title: "提醒未开启",
+            icon: "none",
+          });
+          return;
+        }
         this.localData.reminderRequestedAt = toDateKey();
         this.saveLocalData();
         this.refreshDashboard();

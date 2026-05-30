@@ -34,6 +34,7 @@ Use this checklist before merging or submitting the mini program for review. The
 - [ ] Confirm the reminder action says that the reminder template must be configured first.
 - [ ] Tap the reminder action and confirm it shows the configuration modal, not a fake success state.
 - [ ] If a real subscription template ID is available, fill `REMINDER_TEMPLATE_ID` and confirm `wx.requestSubscribeMessage` is called from the reminder action.
+- [ ] Reject the subscription request once and confirm the app says the reminder was not enabled.
 
 ## Recovery Flow
 

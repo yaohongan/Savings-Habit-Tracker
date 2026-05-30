@@ -54,6 +54,15 @@ test("retention prompts stay honest and low friction", () => {
   assert.match(indexJs, /openCheckInForGoal\(activeGoal \? activeGoal\.id : this\.data\.selectedGoalId,\s*true\)/);
 });
 
+test("reminder request only stores successful user consent", () => {
+  const indexJs = read("./miniprogram/pages/index/index.js");
+
+  assert.match(indexJs, /function isReminderAccepted\(subscribeResult\)/);
+  assert.match(indexJs, /subscribeResult\[REMINDER_TEMPLATE_ID\] === "accept"/);
+  assert.match(indexJs, /success: \(res\) =>/);
+  assert.match(indexJs, /if \(!isReminderAccepted\(res\)\)/);
+});
+
 test("README describes the local-only production shape", () => {
   const readme = read("./README.md");
 
