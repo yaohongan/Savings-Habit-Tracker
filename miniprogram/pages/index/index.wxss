@@ -328,6 +328,16 @@
   line-height: 1.5;
 }
 
+.daily-focus-next-action {
+  margin-bottom: 14rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(30, 127, 116, 0.10);
+  color: var(--primary-strong);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 .daily-focus-milestone {
   font-size: 24rpx;
   color: var(--accent);
@@ -2634,6 +2644,31 @@
   line-height: 1.6;
   color: var(--text-sub);
   margin-bottom: 22rpx;
+}
+
+.backup-summary,
+.backup-preview,
+.backup-error {
+  padding: 16rpx 18rpx;
+  border-radius: 18rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  margin-bottom: 18rpx;
+}
+
+.backup-summary {
+  background: rgba(30, 127, 116, 0.09);
+  color: var(--primary-strong);
+}
+
+.backup-preview {
+  background: rgba(30, 127, 116, 0.08);
+  color: var(--primary-strong);
+}
+
+.backup-error {
+  background: rgba(240, 138, 93, 0.12);
+  color: #B25E38;
 }
 
 .backup-block {

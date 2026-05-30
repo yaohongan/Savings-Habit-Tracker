@@ -42,21 +42,27 @@ Use this checklist before merging or submitting the mini program for review. The
 - [ ] Launch the mini program.
 - [ ] Confirm the daily focus card shows a low-pressure recovery prompt.
 - [ ] Complete a check-in and confirm the prompt disappears after the dashboard refreshes.
+- [ ] Confirm the daily focus card shows a lightweight "tomorrow" action suggestion, not an account or cloud-sync prompt.
 
 ## Sharing Flow
 
 - [ ] Use the native mini program share menu and confirm the share title is goal-specific when a goal exists.
 - [ ] Use timeline sharing and confirm the query includes the share source.
+- [ ] Confirm copied challenge and supervision copy includes a tomorrow return/reminder line.
 - [ ] Generate a poster and confirm the poster uses the current goal/progress data.
+- [ ] Confirm the poster includes the next suggested amount or tomorrow action copy.
 - [ ] Save the poster to the album.
 
 ## Backup And Restore
 
 - [ ] Create at least one goal and one check-in record.
-- [ ] Open backup, copy the backup payload, and save it temporarily.
+- [ ] Open backup, confirm it shows a short `XJ3:` backup code and a local-data summary.
+- [ ] Copy the backup code and save it temporarily.
 - [ ] Clear local storage.
-- [ ] Restore from the copied payload.
+- [ ] Paste the backup code and confirm the restore preview shows goal count, record count, recent date, and streak.
+- [ ] Restore from the copied backup code.
 - [ ] Confirm goals, check-in history, streak, notes, mood tags, and created dates are restored.
+- [ ] Paste broken text and confirm the app explains why restore failed.
 
 ## Layout Checks
 
@@ -79,5 +85,6 @@ Run these before merging:
 ```bash
 node --test optimization-regression.test.mjs
 node --check miniprogram/pages/index/index.js
+node --check miniprogram/utils/retention.js
 node --check miniprogram/app.js
 ```

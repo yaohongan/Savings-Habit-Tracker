@@ -1,4 +1,11 @@
 const STORAGE_KEY = "xj_saving_data_v1";
+const {
+  buildBackupPayload,
+  buildBackupSummary,
+  parseBackupPayload,
+  buildTomorrowActionText,
+  buildShareRecallLine,
+} = require("../../utils/retention");
 
 const HOT_GOAL_TEMPLATES = [
   { name: "旅行基金", icon: "✈️", color: "#EBF5FB", accentColor: "#5DADE2" },
@@ -593,6 +600,7 @@ function buildChallengeBoard(goals = [], history = [], date = new Date()) {
   const shareText = [
     `我正在小简攒钱打卡完成「${challengeName}」。`,
     `365 天挑战已经点亮 ${litDays} 格，累计攒下 ¥${formatAmount(totalAmount)}。`,
+    buildShareRecallLine(challengeName, primaryGoal ? formatAmount(calcSuggestedAmount(primaryGoal)) : "0.00"),
     `从 ${startText} 开始，把想要的生活一格一格存出来。`,
   ].join("\n");
 
@@ -761,7 +769,10 @@ Page({
     challengeShareText: "",
     challengeName: "",
     backupPayload: "",
+    backupSummaryText: "",
     backupInput: "",
+    restorePreviewText: "",
+    restoreErrorText: "",
     focusGoalName: "",
     focusGoalId: 0,
     focusGoalPercentDisplay: "0.0%",
@@ -780,6 +791,7 @@ Page({
     posterHeight: 1334,
     isGeneratingPoster: false,
     posterThemeKey: "challenge",
+    nextActionText: "",
     reminderStatusText: "开启提醒，明天继续点亮一格",
     recoveryPromptText: "",
     achievements: {
@@ -982,11 +994,22 @@ Page({
     const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
     const hasReminderTemplate = Boolean(REMINDER_TEMPLATE_ID);
     const recoveryPromptText = buildCheckInRecoveryText(this.localData.lastCheckInDate, todayKey);
+    const nextActionText = focusGoal
+      ? buildTomorrowActionText(
+        focusGoal.name,
+        focusGoal.suggestedAmountDisplay,
+        Number(focusGoal.todayAdded || 0) > 0
+      )
+      : "";
+    const shareRecallLine = focusGoal
+      ? buildShareRecallLine(focusGoal.name, focusGoal.suggestedAmountDisplay)
+      : "";
     const supervisionShareText = focusGoal
       ? [
         `我正在小简攒钱打卡坚持「${focusGoal.name}」。`,
         `现在进度 ${focusGoal.percent}%，365 点亮挑战已点亮 ${challengeBoard.litDays} 格。`,
-        `你可以隔几天问我一句：今天点亮了吗？`,
+        shareRecallLine,
+        `明天你可以提醒我一句：今天点亮了吗？`,
       ].join("\n")
       : "";
 
@@ -1088,6 +1111,7 @@ Page({
           ? "已尝试开启提醒，明天记得回来点亮"
           : "开启提醒，明天继续点亮一格")
         : "配置提醒模板后可开启",
+      nextActionText,
       recoveryPromptText,
       achievements: this.localData.achievements,
     });
@@ -1099,9 +1123,8 @@ Page({
 
   buildShareTitle() {
     const focusName = this.data.focusGoalName || "我的攒钱目标";
-    const litDays = this.data.challengeLitDaysDisplay || "0";
     if ((this.data.goals || []).length > 0) {
-      return `我正在点亮「${focusName}」，已坚持 ${litDays} 天`;
+      return `我正在点亮「${focusName}」，明天继续点亮`;
     }
     return "和我一起开始小简攒钱打卡";
   },
@@ -1395,16 +1418,14 @@ Page({
   },
 
   onOpenBackup() {
-    const payload = JSON.stringify({
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      app: "小简攒钱打卡",
-      data: this.localData,
-    });
+    const payload = buildBackupPayload(this.localData);
     this.setData({
       showBackupPopup: true,
       backupPayload: payload,
+      backupSummaryText: buildBackupSummary(this.localData),
       backupInput: "",
+      restorePreviewText: "",
+      restoreErrorText: "",
     });
   },
 
@@ -1412,12 +1433,18 @@ Page({
     this.setData({
       showBackupPopup: false,
       backupInput: "",
+      restorePreviewText: "",
+      restoreErrorText: "",
     });
   },
 
   onInputBackupRestore(e) {
+    const input = e.detail.value;
+    const parsed = parseBackupPayload(input);
     this.setData({
-      backupInput: e.detail.value,
+      backupInput: input,
+      restorePreviewText: parsed.ok ? `将恢复：${parsed.summary}` : "",
+      restoreErrorText: input.trim() && !parsed.ok ? parsed.error : "",
     });
   },
 
@@ -1434,48 +1461,34 @@ Page({
   },
 
   onRestoreBackup() {
-    const input = (this.data.backupInput || "").trim();
-    if (!input) {
-      wx.showToast({
-        title: "请先粘贴备份内容",
-        icon: "none",
+    const parsed = parseBackupPayload(this.data.backupInput);
+    if (!parsed.ok) {
+      this.setData({
+        restorePreviewText: "",
+        restoreErrorText: parsed.error,
       });
-      return;
-    }
-
-    let parsed = null;
-    try {
-      parsed = JSON.parse(input);
-    } catch (err) {
-      wx.showToast({
-        title: "备份内容格式不对",
-        icon: "none",
-      });
-      return;
-    }
-
-    const restored = parsed && parsed.data && typeof parsed.data === "object"
-      ? parsed.data
-      : (parsed && Array.isArray(parsed.goals) && Array.isArray(parsed.history) ? parsed : null);
-    if (!restored) {
-      wx.showToast({
-        title: "没有识别到可恢复数据",
-        icon: "none",
+      wx.showModal({
+        title: "恢复失败",
+        content: parsed.error,
+        confirmText: "知道了",
+        showCancel: false,
       });
       return;
     }
 
     wx.showModal({
       title: "确认恢复",
-      content: "恢复会覆盖当前本地数据，请确认已经备份。",
+      content: `${parsed.summary}\n恢复会覆盖当前本地数据，请确认已经备份。`,
       success: (res) => {
         if (!res.confirm) return;
-        this.localData = normalizeLocalData(restored);
+        this.localData = normalizeLocalData(parsed.data);
         this.saveLocalData();
         this.refreshDashboard();
         this.setData({
           showBackupPopup: false,
           backupInput: "",
+          restorePreviewText: "",
+          restoreErrorText: "",
         });
         wx.showToast({
           title: "恢复成功",
@@ -1703,6 +1716,10 @@ Page({
       }
     }
     this.localData.lastCheckInDate = today;
+    const nextSuggestedAmount = calcSuggestedAmount(this.localData.goals[goalIndex]);
+    const checkInToastTitle = nextSuggestedAmount > 0
+      ? `明天先存 ¥${formatAmount(nextSuggestedAmount)}`
+      : "目标已点亮，明天继续";
 
     this.saveLocalData();
     this.refreshDashboard();
@@ -1715,7 +1732,7 @@ Page({
     });
 
     wx.showToast({
-      title: "打卡成功",
+      title: checkInToastTitle,
       icon: "success",
     });
     this.promptSavingReminderAfterCheckIn();
@@ -2091,6 +2108,7 @@ Page({
       ctx.setFillStyle(heroSubColor);
       ctx.setFontSize(22);
       ctx.fillText(`已完成 ${topGoal.percent || "0.0"}% · 距目标还差 ¥${topGoal.remainingDisplay || "0.00"}`, 78, 1176);
+      ctx.fillText(`明天建议 ¥${this.data.focusGoalSuggestedAmountDisplay || "0.00"}，继续点亮一格`, 78, 1212);
 
       const codeBoxX = w - 196;
       const codeBoxY = 1050;

@@ -91,6 +91,7 @@
       </view>
       <view class="daily-focus-tip">{{focusGoalHint}}</view>
       <view class="daily-focus-recovery" wx:if="{{recoveryPromptText}}">{{recoveryPromptText}}</view>
+      <view class="daily-focus-next-action" wx:if="{{nextActionText}}">{{nextActionText}}</view>
       <view class="daily-focus-milestone">{{focusGoalMilestoneText}}</view>
       <view class="daily-focus-actions">
         <view class="daily-focus-action" hover-class="hover-effect" bindtap="onTapCheckInWithGoal" data-id="{{focusGoalId}}">
@@ -787,12 +788,13 @@
       <view class="backup-tip">
         数据仍然只保存在本地。这里提供一个可复制的备份内容，适合换手机或清缓存前保存。
       </view>
+      <view class="backup-summary" wx:if="{{backupSummaryText}}">{{backupSummaryText}}</view>
 
       <view class="backup-block">
-        <text class="backup-label">备份内容</text>
+        <text class="backup-label">短备份码</text>
         <textarea class="backup-textarea" value="{{backupPayload}}" disabled />
         <view class="backup-primary-btn" hover-class="hover-effect" bindtap="onCopyBackup">
-          <text>复制备份内容</text>
+          <text>复制短备份码</text>
         </view>
       </view>
 
@@ -804,6 +806,8 @@
           value="{{backupInput}}"
           bindinput="onInputBackupRestore"
         />
+        <view class="backup-preview" wx:if="{{restorePreviewText}}">{{restorePreviewText}}</view>
+        <view class="backup-error" wx:if="{{restoreErrorText}}">{{restoreErrorText}}</view>
         <view class="backup-secondary-btn" hover-class="hover-effect" bindtap="onRestoreBackup">
           <text>恢复到当前小程序</text>
         </view>
