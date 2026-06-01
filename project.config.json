@@ -45,8 +45,8 @@
     "disableSWC": true
   },
   "appid": "wx814b7ffee5c5d4f3",
-  "projectname": "quickstart-wx-cloud",
-  "libVersion": "2.20.1",
+  "projectname": "小简攒钱打卡",
+  "libVersion": "3.15.0",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
     "search": {

@@ -1,4 +1,14 @@
 const STORAGE_KEY = "xj_saving_data_v1";
+const {
+  POSTER_THEMES,
+  buildXhsMaterials,
+  getPosterRenderModel,
+  getPosterThemeByKey,
+  getSelectedGoalStatus,
+  getSharePrompt,
+  getXhsMaterial,
+  reconcileGoalCompletion,
+} = require("../../utils/growth");
 
 const HOT_GOAL_TEMPLATES = [
   { name: "旅行基金", icon: "✈️", color: "#EBF5FB", accentColor: "#5DADE2" },
@@ -13,6 +23,17 @@ const HOT_GOAL_TEMPLATES = [
 
 const CHALLENGE_SCRIPTS = [
   {
+    name: "奶茶戒断基金",
+    subtitle: "30 天少喝几杯，攒出第一笔",
+    icon: "🥤",
+    target: "600",
+    days: 30,
+    mode: "daily",
+    color: "#FFF1E7",
+    accentColor: "#F08A5D",
+    tip: "把想买奶茶的那一刻，变成点亮挑战墙的一格。",
+  },
+  {
     name: "100天无痛攒钱",
     subtitle: "每天少花一点，100 天看见结果",
     icon: "🌱",
@@ -24,26 +45,15 @@ const CHALLENGE_SCRIPTS = [
     tip: "每天先存一小笔，不追求大额，只追求不断。",
   },
   {
-    name: "奶茶戒断基金",
-    subtitle: "少喝一杯，就给自己存一杯",
-    icon: "🥤",
-    target: "1800",
-    days: 90,
-    mode: "daily",
-    color: "#FFF1E7",
-    accentColor: "#F08A5D",
-    tip: "把想买奶茶的那一刻，变成点亮挑战墙的一格。",
-  },
-  {
-    name: "旅行出发基金",
-    subtitle: "为下一次出发提前攒路费",
-    icon: "🧳",
-    target: "5000",
-    days: 180,
-    mode: "daily",
-    color: "#EBF5FB",
-    accentColor: "#5DADE2",
-    tip: "每一笔都是离出发更近一点，适合截图分享进度。",
+    name: "月存500挑战",
+    subtitle: "先把每月 500 变成稳定动作",
+    icon: "📌",
+    target: "500",
+    days: 30,
+    mode: "monthly",
+    color: "#E8F8F5",
+    accentColor: "#48C9B0",
+    tip: "不追求一次存很多，先把每月固定留一点做成习惯。",
   },
   {
     name: "发薪日先存",
@@ -55,6 +65,28 @@ const CHALLENGE_SCRIPTS = [
     color: "#E8F8F5",
     accentColor: "#48C9B0",
     tip: "每次发薪先存一笔，比月底剩多少再存更稳。",
+  },
+  {
+    name: "低消费周挑战",
+    subtitle: "少买一点，把省下来的变成进度",
+    icon: "🧾",
+    target: "700",
+    days: 7,
+    mode: "daily",
+    color: "#FDF2E9",
+    accentColor: "#D9823B",
+    tip: "这一周不比省多少，只记录每一次忍住冲动后的点亮。",
+  },
+  {
+    name: "旅行出发基金",
+    subtitle: "为下一次出发提前攒路费",
+    icon: "🧳",
+    target: "5000",
+    days: 180,
+    mode: "daily",
+    color: "#EBF5FB",
+    accentColor: "#5DADE2",
+    tip: "每一笔都是离出发更近一点，适合截图分享进度。",
   },
   {
     name: "情侣旅行基金",
@@ -94,12 +126,6 @@ const MOOD_TAGS = [
   { key: "salary", label: "发薪先存", emoji: "💼" },
   { key: "happy", label: "开心奖励", emoji: "✨" },
   { key: "stress", label: "给点安全感", emoji: "🛟" },
-];
-
-const POSTER_THEMES = [
-  { key: "cream", name: "奶油日签", desc: "温柔复盘感", bgStart: "#E8F8F5", bgMid: "#EBF5FB", bgEnd: "#FDFBF7", accent: "#48C9B0", title: "#2C3E50", sub: "#7F8C8D" },
-  { key: "challenge", name: "深绿挑战", desc: "适合晒进度", bgStart: "#143D3A", bgMid: "#1D7369", bgEnd: "#F08A5D", accent: "#FFE2C5", title: "#FFFFFF", sub: "rgba(255,255,255,0.78)" },
-  { key: "sunset", name: "暖橙成就", desc: "适合达成时刻", bgStart: "#FFF1E7", bgMid: "#FFD7BF", bgEnd: "#FDFBF7", accent: "#F08A5D", title: "#5A3428", sub: "#9A6A55" },
 ];
 
 const KEYBOARD_NUM = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"];
@@ -142,10 +168,6 @@ function toMonthKey(date = new Date()) {
 
 function getMoodTagByKey(key) {
   return MOOD_TAGS.find((item) => item.key === key) || MOOD_TAGS[0];
-}
-
-function getPosterThemeByKey(key) {
-  return POSTER_THEMES.find((item) => item.key === key) || POSTER_THEMES[0];
 }
 
 function parseDateKey(dateKey) {
@@ -653,6 +675,7 @@ function normalizeLocalData(local) {
 Page({
   data: {
     statusBarHeight: 20,
+    scrollIntoView: "",
     showCheckInPopup: false,
     showCreateGoalPopup: false,
     showEditGoalPopup: false,
@@ -660,6 +683,7 @@ Page({
     showAchievementsPopup: false,
     showBackupPopup: false,
     showReviewPanel: false,
+    showCheckInNote: false,
     inputAmount: "0",
     inputNote: "",
     selectedMoodKey: "steady",
@@ -688,6 +712,7 @@ Page({
     posterThemes: POSTER_THEMES,
     hotGoalTemplates: HOT_GOAL_TEMPLATES,
     challengeScripts: CHALLENGE_SCRIPTS,
+    featuredChallengeScripts: CHALLENGE_SCRIPTS.slice(0, 5),
     goalModes: GOAL_MODES,
     goals: [],
     totalSavedDisplay: "0.00",
@@ -730,6 +755,11 @@ Page({
     weeklySummaryInsight: "",
     weeklySummaryReportText: "",
     supervisionShareText: "",
+    xhsMaterials: [],
+    showSharePrompt: false,
+    sharePromptTitle: "",
+    sharePromptDesc: "",
+    sharePromptMaterialKey: "partner",
     challengeDays: [],
     challengeLitDaysDisplay: "0",
     challengePercent: 0,
@@ -762,7 +792,7 @@ Page({
     posterWidth: 750,
     posterHeight: 1334,
     isGeneratingPoster: false,
-    posterThemeKey: "challenge",
+    posterThemeKey: "privacy",
     achievements: {
       firstDeposit: false,
       thousandTotal: false,
@@ -841,19 +871,14 @@ Page({
   },
 
   checkGoalCompletion() {
-    const goals = this.localData.goals || [];
-    let newlyCompleted = null;
-    goals.forEach(item => {
-      const saved = Number(item.saved || 0);
-      const target = Number(item.target || 0);
-      if (saved >= target && !item.completed) {
-        item.completed = true;
-        newlyCompleted = item.name;
-      }
-    });
-
-    if (newlyCompleted) {
+    const result = reconcileGoalCompletion(this.localData.goals || []);
+    if (result.changed) {
+      this.localData.goals = result.goals;
       this.saveLocalData();
+    }
+
+    const newlyCompleted = result.newlyCompletedNames[result.newlyCompletedNames.length - 1];
+    if (newlyCompleted) {
       this.setData({
         showCelebration: true,
         celebrationGoalName: newlyCompleted,
@@ -959,7 +984,11 @@ Page({
     const selectedGoalId = mappedGoals.some((item) => item.id === this.data.selectedGoalId)
       ? this.data.selectedGoalId
       : (focusGoal ? focusGoal.id : 0);
-    const selectedGoal = mappedGoals.find((item) => item.id === selectedGoalId) || focusGoal;
+    const selectedGoalStatus = getSelectedGoalStatus({
+      mappedGoals,
+      selectedGoalId,
+      focusGoal,
+    });
     const supervisionShareText = focusGoal
       ? [
         `我正在小简攒钱打卡坚持「${focusGoal.name}」。`,
@@ -967,6 +996,12 @@ Page({
         `你可以隔几天问我一句：今天点亮了吗？`,
       ].join("\n")
       : "";
+    const xhsMaterials = buildXhsMaterials({
+      focusGoal,
+      challengeBoard,
+      weeklySummary,
+      monthlySummary,
+    });
 
     this.setData({
       goals: mappedGoals,
@@ -1017,6 +1052,7 @@ Page({
       weeklySummaryInsight: weeklySummary.insight,
       weeklySummaryReportText: weeklySummary.reportText,
       supervisionShareText,
+      xhsMaterials,
       challengeDays: challengeBoard.days,
       challengeLitDaysDisplay: String(challengeBoard.litDays),
       challengePercent: Number(challengeBoard.percent.toFixed(2)),
@@ -1053,14 +1089,10 @@ Page({
       focusGoalMilestoneText: focusGoal && focusGoal.nextMilestonePercent
         ? `再存 ¥${focusGoal.nextMilestoneAmountDisplay}，就能到 ${focusGoal.nextMilestonePercent}%`
         : "目标完成后会自动点亮勋章和庆祝动画",
-      selectedGoalId,
-      selectedGoalSuggestedAmountDisplay: selectedGoal ? selectedGoal.suggestedAmountDisplay : "0.00",
-      selectedGoalTodayAddedDisplay: selectedGoal ? selectedGoal.todayAddedDisplay : "0.00",
-      selectedGoalHint: selectedGoal
-        ? (Number(selectedGoal.todayAdded || 0) > 0
-          ? `今天已为这个目标存入 ¥${selectedGoal.todayAddedDisplay}`
-          : `建议先存 ¥${selectedGoal.suggestedAmountDisplay}`)
-        : "",
+      selectedGoalId: selectedGoalStatus.selectedGoalId,
+      selectedGoalSuggestedAmountDisplay: selectedGoalStatus.selectedGoalSuggestedAmountDisplay,
+      selectedGoalTodayAddedDisplay: selectedGoalStatus.selectedGoalTodayAddedDisplay,
+      selectedGoalHint: selectedGoalStatus.selectedGoalHint,
       achievements: this.localData.achievements,
     });
   },
@@ -1076,6 +1108,7 @@ Page({
       inputAmount: "0",
       inputNote: "",
       selectedMoodKey: "steady",
+      showCheckInNote: false,
       selectedGoalId: activeGoal ? activeGoal.id : this.data.selectedGoalId,
     });
   },
@@ -1093,13 +1126,23 @@ Page({
       showCheckInPopup: false,
       inputNote: "",
       selectedMoodKey: "steady",
+      showCheckInNote: false,
     });
   },
 
   onSelectGoal(e) {
     const id = Number(e.currentTarget.dataset.id);
-    this.setData({
+    const focusGoal = (this.data.goals || []).find((item) => item.id === this.data.focusGoalId) || null;
+    const selectedGoalStatus = getSelectedGoalStatus({
+      mappedGoals: this.data.goals || [],
       selectedGoalId: id,
+      focusGoal,
+    });
+    this.setData({
+      selectedGoalId: selectedGoalStatus.selectedGoalId,
+      selectedGoalSuggestedAmountDisplay: selectedGoalStatus.selectedGoalSuggestedAmountDisplay,
+      selectedGoalTodayAddedDisplay: selectedGoalStatus.selectedGoalTodayAddedDisplay,
+      selectedGoalHint: selectedGoalStatus.selectedGoalHint,
     });
   },
 
@@ -1120,6 +1163,12 @@ Page({
     const note = String(e.currentTarget.dataset.note || "");
     this.setData({
       inputNote: note,
+    });
+  },
+
+  onToggleCheckInNote() {
+    this.setData({
+      showCheckInNote: !this.data.showCheckInNote,
     });
   },
 
@@ -1156,6 +1205,12 @@ Page({
   onCloseCreateGoal() {
     this.setData({
       showCreateGoalPopup: false,
+      showCheckInPopup: true,
+      selectedGoalId: maxId,
+      inputAmount: "0",
+      inputNote: "",
+      selectedMoodKey: "steady",
+      showCheckInNote: false,
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
@@ -1291,10 +1346,18 @@ Page({
 
     this.localData.goals.push(newGoal);
     this.saveLocalData();
+    this.setData({
+      selectedGoalId: maxId,
+    });
     this.refreshDashboard();
 
     this.setData({
       showCreateGoalPopup: false,
+      showCheckInPopup: true,
+      inputAmount: "0",
+      inputNote: "",
+      selectedMoodKey: "steady",
+      showCheckInNote: false,
       createGoalIcon: "",
       createGoalColor: "",
       createGoalAccentColor: "",
@@ -1539,6 +1602,7 @@ Page({
       inputAmount: "0",
       inputNote: "",
       selectedMoodKey: "steady",
+      showCheckInNote: false,
       selectedGoalId: id,
     });
   },
@@ -1611,7 +1675,13 @@ Page({
       return;
     }
 
-    this.localData.goals[goalIndex].saved = Number(this.localData.goals[goalIndex].saved || 0) + amount;
+    const goal = this.localData.goals[goalIndex];
+    const target = Number(goal.target || 0);
+    const beforeSaved = Number(goal.saved || 0);
+    const beforePercent = target > 0 ? Math.min(100, (beforeSaved / target) * 100) : 0;
+    const afterSaved = beforeSaved + amount;
+    const afterPercent = target > 0 ? Math.min(100, (afterSaved / target) * 100) : 0;
+    goal.saved = afterSaved;
     this.localData.history.push({
       amount,
       goalId,
@@ -1639,11 +1709,23 @@ Page({
     this.saveLocalData();
     this.refreshDashboard();
 
+    const sharePrompt = getSharePrompt({
+      totalCheckIns: this.localData.history.length,
+      streak: this.localData.streak || 0,
+      beforePercent,
+      afterPercent,
+    });
+
     this.setData({
       showCheckInPopup: false,
       inputAmount: "0",
       inputNote: "",
       selectedMoodKey: "steady",
+      showCheckInNote: false,
+      showSharePrompt: Boolean(sharePrompt),
+      sharePromptTitle: sharePrompt ? sharePrompt.title : "",
+      sharePromptDesc: sharePrompt ? sharePrompt.desc : "",
+      sharePromptMaterialKey: sharePrompt && sharePrompt.key === "first" ? "partner" : "progress",
     });
 
     wx.showToast({
@@ -1732,6 +1814,64 @@ Page({
     });
   },
 
+  onCopyXhsMaterial(e) {
+    const key = String(e.currentTarget.dataset.key || "partner");
+    const material = getXhsMaterial(this.data.xhsMaterials, key);
+    if (!material) {
+      wx.showToast({
+        title: "先创建一个挑战",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: material.copyText,
+      success: () => {
+        wx.showToast({
+          title: `${material.name}已复制`,
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onCopyPromptXhsMaterial() {
+    const material = getXhsMaterial(this.data.xhsMaterials, this.data.sharePromptMaterialKey);
+    if (!material) {
+      wx.showToast({
+        title: "先完成一笔打卡",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.setClipboardData({
+      data: material.copyText,
+      success: () => {
+        this.setData({
+          showSharePrompt: false,
+        });
+        wx.showToast({
+          title: "小红书文案已复制",
+          icon: "success",
+        });
+      },
+    });
+  },
+
+  onDismissSharePrompt() {
+    this.setData({
+      showSharePrompt: false,
+    });
+  },
+
+  onOpenXhsCenter() {
+    this.setData({ scrollIntoView: "" }, () => {
+      this.setData({ scrollIntoView: "xhsGrowthCenter" });
+    });
+  },
+
   onCopyGoalScriptShare(e) {
     const id = Number(e.currentTarget.dataset.id);
     const goal = (this.data.goals || []).find((item) => item.id === id);
@@ -1798,206 +1938,246 @@ Page({
     });
   },
 
+  drawPosterBackground(ctx, theme, w, h) {
+    const bgGradient = ctx.createLinearGradient(0, 0, w, h);
+    bgGradient.addColorStop(0, theme.bgStart);
+    bgGradient.addColorStop(0.5, theme.bgMid);
+    bgGradient.addColorStop(1, theme.bgEnd);
+    ctx.setFillStyle(bgGradient);
+    ctx.fillRect(0, 0, w, h);
+  },
+
+  drawPosterCode(ctx, x, y, size) {
+    const padding = 12;
+    ctx.save();
+    ctx.setShadow(0, 12, 30, "rgba(0, 0, 0, 0.08)");
+    drawRoundRectPath(ctx, x, y, size, size, 32);
+    ctx.setFillStyle("#FFFFFF");
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    drawRoundRectPath(ctx, x + padding, y + padding, size - padding * 2, size - padding * 2, 24);
+    ctx.clip();
+    ctx.drawImage(POSTER_MINI_CODE_SRC, x + padding, y + padding, size - padding * 2, size - padding * 2);
+    ctx.restore();
+  },
+
+  drawPosterStats(ctx, stats, x, y, itemWidth, gap, options = {}) {
+    stats.forEach((item, index) => {
+      const currentX = x + index * (itemWidth + gap);
+      drawRoundRectPath(ctx, currentX, y, itemWidth, 134, 28);
+      ctx.setFillStyle(options.bg || "rgba(255,255,255,0.76)");
+      ctx.fill();
+      ctx.setTextAlign("center");
+      ctx.setFillStyle(options.valueColor || "#22313F");
+      ctx.setFontSize(32);
+      ctx.fillText(item.value, currentX + itemWidth / 2, y + 54);
+      ctx.setFillStyle(options.labelColor || "#6D7A86");
+      ctx.setFontSize(22);
+      ctx.fillText(item.label, currentX + itemWidth / 2, y + 96);
+    });
+  },
+
+  drawPrivacyPoster(ctx, theme, model, topGoal, w, h) {
+    this.drawPosterBackground(ctx, theme, w, h);
+    ctx.beginPath();
+    ctx.arc(80, 210, 320, 0, 2 * Math.PI);
+    ctx.setFillStyle("rgba(255, 255, 255, 0.46)");
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(720, 980, 460, 0, 2 * Math.PI);
+    ctx.setFillStyle("rgba(30, 127, 116, 0.10)");
+    ctx.fill();
+
+    ctx.setTextAlign("left");
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(24);
+    ctx.fillText(`小简攒钱打卡 · ${theme.name}`, 56, 82);
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(54);
+    ctx.fillText(model.headline, 56, 154);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(26);
+    ctx.fillText(model.subline, 56, 200);
+
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(112);
+    ctx.fillText(model.heroMetric, 56, 330);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(30);
+    ctx.fillText(model.heroLabel, 56, 374);
+
+    drawRoundRectPath(ctx, 56, 420, w - 112, 18, 9);
+    ctx.setFillStyle("rgba(255,255,255,0.64)");
+    ctx.fill();
+    drawRoundRectPath(ctx, 56, 420, Math.max(18, (w - 112) * (Number(this.data.challengePercent || 0) / 100)), 18, 9);
+    ctx.setFillStyle(theme.accent);
+    ctx.fill();
+
+    drawRoundRectPath(ctx, 48, 500, w - 96, 360, 44);
+    ctx.setFillStyle("rgba(255,255,255,0.88)");
+    ctx.fill();
+    ctx.setFillStyle("#22313F");
+    ctx.setFontSize(30);
+    ctx.fillText("365 DAY SAVING WALL", 88, 562);
+    ctx.setFillStyle("#6D7A86");
+    ctx.setFontSize(22);
+    ctx.fillText("每一个亮点，都是一次认真存下来的选择", 88, 600);
+
+    const dots = (this.data.challengeDays || []).slice(0, 365);
+    const cols = 25;
+    const dotSize = 12;
+    const dotGap = 10;
+    dots.forEach((day, index) => {
+      const x = 88 + (index % cols) * (dotSize + dotGap);
+      const y = 638 + Math.floor(index / cols) * (dotSize + dotGap);
+      ctx.setFillStyle(day.isLit ? theme.accent : (day.isFuture ? "#EEF2F4" : "#DDE5E7"));
+      drawRoundRectPath(ctx, x, y, dotSize, dotSize, 4);
+      ctx.fill();
+    });
+
+    this.drawPosterStats(ctx, model.stats, 48, 910, 196, 24, { valueColor: theme.title, labelColor: theme.sub });
+    drawRoundRectPath(ctx, 48, 1090, w - 276, 122, 30);
+    ctx.setFillStyle("rgba(255,255,255,0.72)");
+    ctx.fill();
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(22);
+    ctx.fillText("当前目标", 78, 1132);
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(32);
+    ctx.fillText(topGoal.name || "我的攒钱目标", 78, 1174);
+    this.drawPosterCode(ctx, w - 196, 1084, 148);
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(30);
+    ctx.fillText("长按扫码，开启你的攒钱挑战", 56, 1292);
+  },
+
+  drawPartnerPoster(ctx, theme, model, topGoal, w, h) {
+    this.drawPosterBackground(ctx, theme, w, h);
+    ctx.setTextAlign("left");
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(24);
+    ctx.fillText(`小简攒钱打卡 · ${theme.name}`, 56, 86);
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(62);
+    ctx.fillText(model.headline, 56, 170);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(28);
+    ctx.fillText(model.subline, 56, 220);
+
+    drawRoundRectPath(ctx, 56, 286, w - 112, 330, 46);
+    ctx.setFillStyle("rgba(255,255,255,0.72)");
+    ctx.fill();
+    ctx.setTextAlign("center");
+    ctx.setFillStyle(theme.accent);
+    ctx.setFontSize(118);
+    ctx.fillText("一起", w / 2, 420);
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(46);
+    ctx.fillText("互相提醒今天有没有点亮", w / 2, 500);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(26);
+    ctx.fillText(model.cta, w / 2, 558);
+
+    this.drawPosterStats(ctx, model.stats, 48, 680, 196, 24, { valueColor: theme.title, labelColor: theme.sub });
+    drawRoundRectPath(ctx, 56, 880, w - 112, 192, 38);
+    ctx.setFillStyle("#FFFFFF");
+    ctx.fill();
+    ctx.setTextAlign("left");
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(34);
+    ctx.fillText("我的邀请", 92, 940);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(26);
+    ctx.fillText("不用比谁存得多，只要一起把记录变连续。", 92, 990);
+    ctx.fillText(`当前挑战：${topGoal.name || "我的攒钱目标"}`, 92, 1032);
+
+    this.drawPosterCode(ctx, w - 210, 1120, 148);
+    ctx.setTextAlign("left");
+    ctx.setFillStyle(theme.title);
+    ctx.setFontSize(34);
+    ctx.fillText("一起攒钱搭子吗", 56, 1190);
+    ctx.setFillStyle(theme.sub);
+    ctx.setFontSize(24);
+    ctx.fillText("长按扫码，从今天这一格开始", 56, 1232);
+  },
+
+  drawCelebratePoster(ctx, theme, model, topGoal, w, h) {
+    this.drawPosterBackground(ctx, theme, w, h);
+    ctx.setTextAlign("center");
+    ctx.setFillStyle("rgba(255,255,255,0.78)");
+    ctx.setFontSize(24);
+    ctx.fillText(`小简攒钱打卡 · ${theme.name}`, w / 2, 92);
+    ctx.setFillStyle("#FFFFFF");
+    ctx.setFontSize(58);
+    ctx.fillText(model.headline, w / 2, 180);
+
+    ctx.beginPath();
+    ctx.arc(w / 2, 390, 150, 0, 2 * Math.PI);
+    ctx.setFillStyle("rgba(255,255,255,0.18)");
+    ctx.fill();
+    ctx.setFillStyle(theme.accent);
+    ctx.setFontSize(120);
+    ctx.fillText(model.heroMetric, w / 2, 420);
+    ctx.setFillStyle("rgba(255,255,255,0.78)");
+    ctx.setFontSize(28);
+    ctx.fillText(model.heroLabel, w / 2, 478);
+
+    drawRoundRectPath(ctx, 56, 590, w - 112, 240, 44);
+    ctx.setFillStyle("rgba(255,255,255,0.14)");
+    ctx.fill();
+    ctx.setFillStyle("#FFFFFF");
+    ctx.setFontSize(34);
+    ctx.fillText(topGoal.name || "我的攒钱目标", w / 2, 670);
+    ctx.setFillStyle("rgba(255,255,255,0.78)");
+    ctx.setFontSize(26);
+    ctx.fillText(model.cta, w / 2, 730);
+
+    this.drawPosterStats(ctx, model.stats, 48, 900, 196, 24, {
+      bg: "rgba(255,255,255,0.16)",
+      valueColor: "#FFFFFF",
+      labelColor: "rgba(255,255,255,0.76)",
+    });
+
+    this.drawPosterCode(ctx, w / 2 - 74, 1090, 148);
+    ctx.setFillStyle("#FFFFFF");
+    ctx.setFontSize(32);
+    ctx.fillText("长按扫码，开启你的攒钱挑战", w / 2, 1290);
+  },
+
   async onGeneratePoster() {
     if (this.data.isGeneratingPoster) return;
     this.setData({ isGeneratingPoster: true });
-    wx.showLoading({ title: "生成海报中..." });
 
     try {
       const posterTheme = getPosterThemeByKey(this.data.posterThemeKey);
-      const now = new Date();
-      const monthArr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const dateText = `${String(now.getDate()).padStart(2, "0")} ${monthArr[now.getMonth()]} ${now.getFullYear()}`;
-      const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const dayText = weekDays[now.getDay()];
-
+      wx.showLoading({ title: `${posterTheme.name}生成中...` });
       const topGoal = (this.data.goals || [])[0] || {
         name: "我的攒钱目标",
         percent: "0.0",
         targetDisplay: "0.00",
         remainingDisplay: "0.00",
       };
-
       const ctx = wx.createCanvasContext("posterCanvas", this);
       const w = POSTER_WIDTH;
       const h = POSTER_HEIGHT;
-
-      const bgGradient = ctx.createLinearGradient(0, 0, w, h);
-      bgGradient.addColorStop(0, posterTheme.bgStart);
-      bgGradient.addColorStop(0.46, posterTheme.bgMid);
-      bgGradient.addColorStop(1, posterTheme.bgEnd);
-      ctx.setFillStyle(bgGradient);
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.beginPath();
-      ctx.arc(80, 210, 320, 0, 2 * Math.PI);
-      ctx.setFillStyle(posterTheme.key === "challenge" ? "rgba(255, 226, 197, 0.18)" : "rgba(255, 255, 255, 0.46)");
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(720, 980, 460, 0, 2 * Math.PI);
-      ctx.setFillStyle(posterTheme.key === "challenge" ? "rgba(255, 255, 255, 0.12)" : "rgba(30, 127, 116, 0.10)");
-      ctx.fill();
-
-      const isDarkPoster = posterTheme.key === "challenge";
-      const heroTextColor = isDarkPoster ? "#FFFFFF" : posterTheme.title;
-      const heroSubColor = isDarkPoster ? "rgba(255,255,255,0.76)" : posterTheme.sub;
-      const cardBg = isDarkPoster ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.88)";
-      const cardText = "#22313F";
-
-      ctx.setTextAlign("left");
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(24);
-      ctx.fillText("小简攒钱打卡", 56, 76);
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(50);
-      ctx.fillText("我的 365 点亮墙", 56, 142);
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(24);
-      ctx.fillText(`${dateText} · ${posterTheme.name}`, 56, 184);
-
-      ctx.setTextAlign("right");
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(28);
-      ctx.fillText(dayText, w - 56, 82);
-      drawRoundRectPath(ctx, w - 218, 108, 162, 58, 29);
-      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(30,127,116,0.12)");
-      ctx.fill();
-      ctx.setTextAlign("center");
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(24);
-      ctx.fillText("攒钱挑战中", w - 137, 146);
-
-      ctx.setTextAlign("left");
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(106);
-      ctx.fillText(this.data.challengeLitDaysDisplay, 56, 300);
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(34);
-      ctx.fillText("/ 365 格已点亮", 250, 292);
-
-      drawRoundRectPath(ctx, 56, 328, w - 112, 18, 9);
-      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.56)");
-      ctx.fill();
-      drawRoundRectPath(ctx, 56, 328, Math.max(18, (w - 112) * (Number(this.data.challengePercent || 0) / 100)), 18, 9);
-      const progressGradient = ctx.createLinearGradient(56, 328, w - 56, 346);
-      progressGradient.addColorStop(0, posterTheme.accent);
-      progressGradient.addColorStop(1, "#FFFFFF");
-      ctx.setFillStyle(progressGradient);
-      ctx.fill();
-
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(26);
-      ctx.fillText(`从 ${this.data.challengeStartText || "今天"} 开始，把想要的生活一格一格存出来`, 56, 392);
-
-      ctx.save();
-      ctx.setShadow(0, 22, 66, isDarkPoster ? "rgba(0,0,0,0.18)" : "rgba(31,71,85,0.12)");
-      drawRoundRectPath(ctx, 48, 430, w - 96, 410, 44);
-      ctx.setFillStyle(cardBg);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.setFillStyle(cardText);
-      ctx.setFontSize(30);
-      ctx.fillText("365 DAY SAVING WALL", 88, 494);
-      ctx.setFillStyle("#6D7A86");
-      ctx.setFontSize(22);
-      ctx.fillText("每一个亮点，都是一次认真存下来的选择", 88, 532);
-
-      const challengeDaysForPoster = (this.data.challengeDays || []).slice(0, 365);
-      const cols = 25;
-      const dotSize = 12;
-      const dotGap = 10;
-      const gridX = 88;
-      const gridY = 570;
-      challengeDaysForPoster.forEach((day, index) => {
-        const x = gridX + (index % cols) * (dotSize + dotGap);
-        const y = gridY + Math.floor(index / cols) * (dotSize + dotGap);
-        if (day.isLit) {
-          ctx.setFillStyle(day.amount >= 200 ? "#14554E" : (day.amount >= 50 ? "#2FAE98" : posterTheme.accent));
-        } else if (day.isFuture) {
-          ctx.setFillStyle("#EEF2F4");
-        } else {
-          ctx.setFillStyle("#DDE5E7");
-        }
-        drawRoundRectPath(ctx, x, y, dotSize, dotSize, 4);
-        ctx.fill();
+      const posterModel = getPosterRenderModel(posterTheme.key, {
+        topGoal,
+        challengeLitDaysDisplay: this.data.challengeLitDaysDisplay,
+        challengePercentDisplay: this.data.challengePercentDisplay,
+        streakDisplay: this.data.streakDisplay,
+        weeklySummaryDaysDisplay: this.data.weeklySummaryDaysDisplay,
+        challengeTotalAmountDisplay: this.data.challengeTotalAmountDisplay,
       });
 
-      const statY = 880;
-      const statWidth = 196;
-      const statGap = 24;
-      const stats = [
-        { label: "累计攒下", value: `¥${this.data.challengeTotalAmountDisplay}` },
-        { label: "连续打卡", value: `${this.data.streakDisplay} 天` },
-        { label: "本周打卡", value: `${this.data.weeklySummaryDaysDisplay} 天` },
-      ];
-      stats.forEach((item, index) => {
-        const x = 48 + index * (statWidth + statGap);
-        drawRoundRectPath(ctx, x, statY, statWidth, 138, 30);
-        ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.76)");
-        ctx.fill();
-        ctx.setTextAlign("center");
-        ctx.setFillStyle(heroTextColor);
-        ctx.setFontSize(34);
-        ctx.fillText(item.value, x + statWidth / 2, statY + 56);
-        ctx.setFillStyle(heroSubColor);
-        ctx.setFontSize(22);
-        ctx.fillText(item.label, x + statWidth / 2, statY + 98);
-      });
-
-      ctx.setTextAlign("left");
-      drawRoundRectPath(ctx, 48, 1050, w - 276, 142, 34);
-      ctx.setFillStyle(isDarkPoster ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.72)");
-      ctx.fill();
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(22);
-      ctx.fillText("当前目标", 78, 1092);
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(34);
-      ctx.fillText(topGoal.name || "我的攒钱目标", 78, 1140);
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(22);
-      ctx.fillText(`已完成 ${topGoal.percent || "0.0"}% · 距目标还差 ¥${topGoal.remainingDisplay || "0.00"}`, 78, 1176);
-
-      const codeBoxX = w - 196;
-      const codeBoxY = 1050;
-      const codeBoxSize = 148;
-      const codeImagePadding = 12;
-
-      ctx.save();
-      ctx.setShadow(0, 12, 30, "rgba(0, 0, 0, 0.08)");
-      drawRoundRectPath(ctx, codeBoxX, codeBoxY, codeBoxSize, codeBoxSize, 32);
-      ctx.setFillStyle("#FFFFFF");
-      ctx.fill();
-      ctx.restore();
-
-      ctx.save();
-      drawRoundRectPath(
-        ctx,
-        codeBoxX + codeImagePadding,
-        codeBoxY + codeImagePadding,
-        codeBoxSize - codeImagePadding * 2,
-        codeBoxSize - codeImagePadding * 2,
-        24
-      );
-      ctx.clip();
-      ctx.drawImage(
-        POSTER_MINI_CODE_SRC,
-        codeBoxX + codeImagePadding,
-        codeBoxY + codeImagePadding,
-        codeBoxSize - codeImagePadding * 2,
-        codeBoxSize - codeImagePadding * 2
-      );
-      ctx.restore();
-
-      ctx.setTextAlign("left");
-      ctx.setFillStyle(heroTextColor);
-      ctx.setFontSize(32);
-      ctx.fillText("今天也在认真变富", 56, 1260);
-      ctx.setFillStyle(heroSubColor);
-      ctx.setFontSize(22);
-      ctx.fillText("长按扫码，开启你的攒钱挑战", 56, 1298);
+      if (posterModel.layout === "partner-invite") {
+        this.drawPartnerPoster(ctx, posterTheme, posterModel, topGoal, w, h);
+      } else if (posterModel.layout === "completion-celebration") {
+        this.drawCelebratePoster(ctx, posterTheme, posterModel, topGoal, w, h);
+      } else {
+        this.drawPrivacyPoster(ctx, posterTheme, posterModel, topGoal, w, h);
+      }
 
       const posterTempFilePath = await this.exportPosterCanvas(ctx, w, h);
 
@@ -2005,7 +2185,7 @@ Page({
       this.setData({ isGeneratingPoster: false });
       wx.previewImage({
         urls: [posterTempFilePath],
-      current: posterTempFilePath,
+        current: posterTempFilePath,
       });
     } catch (err) {
       wx.hideLoading();

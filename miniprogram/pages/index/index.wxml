@@ -19,7 +19,7 @@
     </view>
   </view>
 
-  <scroll-view scroll-y class="main-scroll" style="padding-top: {{statusBarHeight + 44}}px;">
+  <scroll-view scroll-y class="main-scroll" scroll-into-view="{{scrollIntoView}}" scroll-with-animation style="padding-top: {{statusBarHeight + 44}}px;">
     
     <!-- 顶部资产大字区 -->
     <view class="asset-hero">
@@ -37,6 +37,26 @@
           <view class="progress-fill" style="width: {{overallPercent}}%;"></view>
         </view>
         <text class="progress-txt">总目标进度 {{overallPercentDisplay}}</text>
+      </view>
+      <view class="hero-growth-entry" wx:if="{{goals.length > 0}}">
+        <view class="hero-growth-copy">
+          <text class="hero-growth-kicker">今天点亮第 {{challengeLitDaysDisplay}} 格</text>
+          <text class="hero-growth-desc">生成小红书打卡素材，晒坚持不晒压力</text>
+        </view>
+        <view class="hero-growth-btn" hover-class="hover-effect" bindtap="onOpenXhsCenter">素材中心</view>
+      </view>
+    </view>
+
+    <view class="share-trigger-card" wx:if="{{showSharePrompt}}">
+      <view class="share-trigger-main">
+        <view class="share-trigger-kicker">可以晒一下了</view>
+        <view class="share-trigger-title">{{sharePromptTitle}}</view>
+        <view class="share-trigger-desc">{{sharePromptDesc}}</view>
+      </view>
+      <view class="share-trigger-actions">
+        <view class="share-trigger-btn share-trigger-copy" hover-class="hover-effect" bindtap="onCopyPromptXhsMaterial">复制文案</view>
+        <view class="share-trigger-btn" hover-class="hover-effect" bindtap="onGeneratePoster">生成海报</view>
+        <view class="share-trigger-close" bindtap="onDismissSharePrompt">暂不</view>
       </view>
     </view>
 
@@ -153,6 +173,48 @@
       </view>
     </view>
 
+    <view id="xhsGrowthCenter" class="xhs-growth-card" wx:if="{{goals.length > 0}}">
+      <view class="xhs-growth-head">
+        <view>
+          <view class="xhs-growth-kicker">小红书素材中心</view>
+          <view class="xhs-growth-title">把打卡变成能发出去的内容</view>
+        </view>
+      </view>
+      <view class="xhs-growth-grid">
+        <view
+          wx:for="{{xhsMaterials}}"
+          wx:key="key"
+          class="xhs-growth-item"
+          data-key="{{item.key}}"
+          bindtap="onCopyXhsMaterial"
+          hover-class="hover-effect"
+        >
+          <text class="xhs-growth-icon">{{item.icon}}</text>
+          <text class="xhs-growth-name">{{item.name}}</text>
+          <text class="xhs-growth-desc">{{item.title}}</text>
+        </view>
+      </view>
+      <view class="xhs-growth-tags">#存钱搭子 #攒钱打卡 #无痛攒钱 #存钱挑战</view>
+      <view class="poster-theme-box poster-theme-box-front">
+        <view class="poster-theme-head">
+          <text>可晒挑战卡</text>
+          <view class="poster-theme-generate" hover-class="hover-effect" bindtap="onGeneratePoster">生成当前模板</view>
+        </view>
+        <view class="poster-theme-list">
+          <view
+            wx:for="{{posterThemes}}"
+            wx:key="key"
+            class="poster-theme-chip {{posterThemeKey === item.key ? 'poster-theme-chip-active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectPosterTheme"
+          >
+            <text class="poster-theme-name">{{item.name}}</text>
+            <text class="poster-theme-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view class="review-entry-card" wx:if="{{goals.length > 0}}" hover-class="hover-effect" bindtap="onToggleReviewPanel">
       <view class="review-entry-left">
         <view class="review-entry-kicker">复盘中心</view>
@@ -169,48 +231,6 @@
     </view>
 
     <view class="review-panel" wx:if="{{goals.length > 0 && showReviewPanel}}">
-    <view class="share-kit-card">
-      <view class="share-kit-header">
-        <view>
-          <view class="share-kit-tag">分享素材中心</view>
-          <view class="share-kit-title">把坚持变成能发出去的素材</view>
-        </view>
-      </view>
-      <view class="share-kit-grid">
-        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopyWeeklyReport">
-          <text class="share-kit-icon">📝</text>
-          <text class="share-kit-name">复制本周周报</text>
-          <text class="share-kit-desc">{{weeklySummaryRangeText}} · {{weeklySummaryDaysDisplay}} 天打卡</text>
-        </view>
-        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopyChallengeShare">
-          <text class="share-kit-icon">✨</text>
-          <text class="share-kit-name">复制挑战进度</text>
-          <text class="share-kit-desc">365 点亮 {{challengeLitDaysDisplay}} 格</text>
-        </view>
-        <view class="share-kit-item" hover-class="hover-effect" bindtap="onCopySupervisionShare">
-          <text class="share-kit-icon">👀</text>
-          <text class="share-kit-name">邀请朋友监督</text>
-          <text class="share-kit-desc">一句话让朋友提醒你别断</text>
-        </view>
-      </view>
-      <view class="poster-theme-box">
-        <view class="poster-theme-head">
-          <text>海报模板</text>
-          <view class="poster-theme-generate" hover-class="hover-effect" bindtap="onGeneratePoster">生成当前模板</view>
-        </view>
-        <view class="poster-theme-list">
-          <view
-            wx:for="{{posterThemes}}"
-            wx:key="key"
-            class="poster-theme-chip {{posterThemeKey === item.key ? 'poster-theme-chip-active' : ''}}"
-            data-key="{{item.key}}"
-            bindtap="onSelectPosterTheme"
-          >
-            <text class="poster-theme-name">{{item.name}}</text>
-            <text class="poster-theme-desc">{{item.desc}}</text>
-          </view>
-        </view>
-      </view>
       <view class="weekly-report-card">
         <view class="weekly-report-top">
           <view>
@@ -332,7 +352,6 @@
       </view>
       <view class="summary-insight">{{monthlySummaryInsight}}</view>
     </view>
-    </view>
 
     <!-- 真实攒钱剧本 -->
     <view class="script-section" wx:if="{{goals.length === 0}}">
@@ -344,7 +363,7 @@
       </view>
       <scroll-view scroll-x class="script-scroll" show-scrollbar="false">
         <view
-          wx:for="{{challengeScripts}}"
+          wx:for="{{featuredChallengeScripts}}"
           wx:key="name"
           class="script-card"
           data-index="{{index}}"
@@ -382,10 +401,6 @@
     <view class="goals-section">
       <view class="section-header">
         <text class="title">我的攒钱目标</text>
-        <view class="btn-share" hover-class="hover-effect" bindtap="onGeneratePoster" wx:if="{{goals.length > 0}}">
-          <text class="icon">📸</text>
-          <text>生成海报</text>
-        </view>
       </view>
 
       <view class="goal-list" wx:if="{{goals.length > 0}}">
@@ -511,12 +526,12 @@
         </view>
       </view>
 
-      <view class="checkin-note-card">
-        <view class="checkin-note-header">
+      <view class="checkin-note-card {{showCheckInNote ? 'checkin-note-card-open' : ''}}">
+        <view class="checkin-note-header" bindtap="onToggleCheckInNote">
           <text class="checkin-note-title">给这笔钱留一句话</text>
-          <text class="checkin-note-desc">选填，但很适合以后回来翻</text>
+          <text class="checkin-note-desc">{{showCheckInNote ? '收起' : '选填，展开写备注'}}</text>
         </view>
-        <view class="mood-tag-list">
+        <view wx:if="{{showCheckInNote}}" class="mood-tag-list">
           <view
             wx:for="{{moodTags}}"
             wx:key="key"
@@ -528,7 +543,7 @@
             <text>{{item.label}}</text>
           </view>
         </view>
-        <view class="note-template-list">
+        <view wx:if="{{showCheckInNote}}" class="note-template-list">
           <view
             wx:for="{{noteTemplates}}"
             wx:key="*this"
@@ -540,6 +555,7 @@
           </view>
         </view>
         <input
+          wx:if="{{showCheckInNote}}"
           class="note-input"
           maxlength="30"
           placeholder="比如：今天少点一杯奶茶，先为旅行基金存起来"
@@ -583,12 +599,19 @@
           </view>
         </view>
         <view class="keyboard-action">
-          <view class="action-btn-date">今天 ▼</view>
-          <view class="action-btn-share" hover-class="hover-effect" bindtap="onGeneratePoster">海报</view>
-          <view class="action-btn-confirm" hover-class="hover-effect" bindtap="onConfirmCheckIn">打卡</view>
+          <view class="action-btn-date">今天</view>
         </view>
       </view>
     </scroll-view>
+    <view class="checkin-fixed-footer">
+      <view class="checkin-footer-meta">
+        <text>本次存入</text>
+        <text class="checkin-footer-amount">¥{{inputAmount}}</text>
+      </view>
+      <view class="checkin-primary-confirm" hover-class="hover-effect" bindtap="onConfirmCheckIn">
+        打卡
+      </view>
+    </view>
   </view>
 
   <!-- 创建目标弹窗 -->
